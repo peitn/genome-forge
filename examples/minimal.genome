@@ -1,0 +1,11 @@
+project minimal v0.1
+compile python
+
+module Wallet: service {
+    out tx_created
+    behavior create_transaction(to: str, amount: int) -> tx {
+        tx = {"to": to, "amount": amount}
+        self.emit("tx_created", tx)
+        return tx
+    }
+}
