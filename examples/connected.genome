@@ -1,0 +1,22 @@
+project connected v0.1
+compile python
+
+module Wallet: service {
+    out tx_created
+    behavior create_transaction(to: str, amount: int) -> tx {
+        tx = {"to": to, "amount": amount}
+        self.emit("tx_created", tx)
+        return tx
+    }
+}
+
+module Ledger: service {
+    state total_tx: int = 0
+    state last_tx: str = ""
+    on record(tx: dict) {
+        self.total_tx += 1
+        self.last_tx = str(tx)
+    }
+}
+
+connect Wallet.tx_created -> Ledger.record
