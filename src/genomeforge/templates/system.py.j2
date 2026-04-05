@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+from {{ project.name }}.runtime.bus import EventBus
+from {{ project.name }}.runtime.adaptive import AdaptiveRuntime, AdaptiveRule
+{% for mod in project.modules %}from {{ project.name }}.modules.{{ mod.name | lower }} import {{ mod.name }}Module
+{% endfor %}
+
+class {{ project.name | py_class_name }}System:
+    def __init__(self):
+        self.bus = EventBus()
+        self.runtime = AdaptiveRuntime()
+{% for mod in project.modules %}        self.{{ mod.name | lower }} = {{ mod.name }}Module(self.bus)
+        self.bus.register(self.{{ mod.name | lower }})
+{% endfor %}
+{% for route in project.routes %}        self.bus.add_route("{{ route.src_module }}", "{{ route.src_signal }}", "{{ route.dst_module }}", "{{ route.dst_signal }}")
+{% endfor %}
+{% for rule in project.adapt_rules %}        self.runtime.add_rule(AdaptiveRule("{{ rule.target_module }}", "{{ rule.metric }}", "{{ rule.operator }}", {{ rule.threshold }}, "{{ rule.target_state }}", {{ rule.target_value | repr }}))
+{% endfor %}
+    def tick(self):
+        self.runtime.evaluate({
+{% for mod in project.modules %}            "{{ mod.name }}": self.{{ mod.name | lower }}{% if not loop.last %},{% endif %}
+{% endfor %}        })
