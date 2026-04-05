@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+from {{ project.name }}.runtime.base import BaseModule
+
+class {{ mod.name }}Module(BaseModule):
+    def __init__(self, bus):
+        super().__init__(bus, "{{ mod.name }}")
+{% for state in mod.states %}        self.{{ state.name }} = {{ state.default_value | repr }}
+{% endfor %}
+
+{% for beh in mod.behaviors %}    def {{ beh.name }}(self{% if beh.params %}, {% endif %}{% for p in beh.params %}{{ p.name }}: {{ p.type_name }}{% if not loop.last %}, {% endif %}{% endfor %}):
+{{ beh.body | indent(8, True) }}
+{% endfor %}
+
+{% for handler in mod.handlers %}    def handle_{{ handler.name }}(self{% if handler.params %}, {% endif %}{% for p in handler.params %}{{ p.name }}: {{ p.type_name }}{% if not loop.last %}, {% endif %}{% endfor %}):
+{{ handler.body | indent(8, True) }}
+{% endfor %}
+
+    def evaluate_metric(self, metric_name: str):
+{% for m in mod.metrics %}        if metric_name == "{{ m.name }}":
+            return {{ m.expression }}
+{% endfor %}        return super().evaluate_metric(metric_name)
