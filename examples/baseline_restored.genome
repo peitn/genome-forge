@@ -1,0 +1,21 @@
+project baseline v0.1
+compile python
+
+plasmid CompressionCore {
+    state is_compressed: bool = true
+    metric compress_ready = 1
+}
+
+plasmid CryptoCore {
+    state is_secure: bool = true
+    metric crypto_ready = 1
+}
+
+module Wallet: service {
+    out tx_created
+    behavior create_transaction(to: str, amount: int) -> tx {
+        tx = {"to": to, "amount": amount}
+        self.emit("tx_created", tx)
+        return tx
+    }
+}
