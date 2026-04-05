@@ -1,0 +1,4 @@
+include README.md
+recursive-include src/genomeforge/templates *.j2
+recursive-include examples *.genome
+recursive-include tests *.py
