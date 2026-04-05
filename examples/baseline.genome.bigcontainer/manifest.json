@@ -1,0 +1,51 @@
+{
+  "format": "share-import-big-container.v1",
+  "original_name": "baseline.genome",
+  "original_size_bytes": 429,
+  "original_sha256": "73a4f39c141248c14d4391afec67dc45671397f31e8c8d1a68da88b52330a62e",
+  "encoding": "base64",
+  "chunk_size_chars": 100,
+  "part_count": 6,
+  "parts": [
+    {
+      "index": 0,
+      "file": "part_0000.b64",
+      "chars": 100,
+      "sha256": "20556bcd464febb5182e759513866067c5d53a12e4100826eb606c31edfbd1aa"
+    },
+    {
+      "index": 1,
+      "file": "part_0001.b64",
+      "chars": 100,
+      "sha256": "370a7b28efd1db46b11729e29db9ba22390420bd2c9b7eaee8199f2d63139c56"
+    },
+    {
+      "index": 2,
+      "file": "part_0002.b64",
+      "chars": 100,
+      "sha256": "1ba9870b81ad1c9c73bc868b609bb92df4619c233705190dace5f98825f7b806"
+    },
+    {
+      "index": 3,
+      "file": "part_0003.b64",
+      "chars": 100,
+      "sha256": "744b13603d892b91c6f6db1c706e3cd0f5432a5990176eb4c77ea07b69916774"
+    },
+    {
+      "index": 4,
+      "file": "part_0004.b64",
+      "chars": 100,
+      "sha256": "5f4c7805cc26a1066ca9cf338ca2bb28eb590ab29a69b6a59ffde57008d1ee3a"
+    },
+    {
+      "index": 5,
+      "file": "part_0005.b64",
+      "chars": 72,
+      "sha256": "7a4f2a48329b0b594d1a953e956fcebac6e09e91d7bd66761aa6334354ab9ae8"
+    }
+  ],
+  "commands": {
+    "pack": "python bigcontainer.py pack baseline.genome",
+    "unpack": "python bigcontainer.py unpack --manifest manifest.json --out baseline.genome"
+  }
+}
