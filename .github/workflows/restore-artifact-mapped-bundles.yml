@@ -1,0 +1,138 @@
+name: Restore Artifact-Mapped Big Container Bundles
+
+on:
+  push:
+    branches:
+      - artifact/0-2-0-patch-bundle
+  workflow_dispatch:
+
+jobs:
+  restore-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout artifact branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Restore artifact-mapped bundles
+        run: |
+          python - <<'PY'
+          import base64
+          import binascii
+          import hashlib
+          import json
+          from pathlib import Path
+
+          def sha256_bytes(data: bytes) -> str:
+              return hashlib.sha256(data).hexdigest()
+
+          def sha256_text(text: str) -> str:
+              return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+          artifacts_root = Path("artifacts")
+          if not artifacts_root.exists():
+              print("No artifacts directory found.")
+              raise SystemExit(0)
+
+          restored = []
+          for manifest_path in artifacts_root.rglob("*.bigcontainer/manifest.json"):
+              manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+              bundle_dir = manifest_path.parent
+              rel_bundle = bundle_dir.relative_to(artifacts_root)
+              bundle_name = rel_bundle.name
+              if not bundle_name.endswith(".bigcontainer"):
+                  continue
+              target_name = bundle_name[:-13]
+              target_rel = rel_bundle.parent / target_name
+
+              joined_parts = []
+              for part in manifest["parts"]:
+                  part_path = bundle_dir / part["file"]
+                  text = part_path.read_text(encoding="utf-8")
+                  if sha256_text(text) != part["sha256"]:
+                      raise ValueError(f"Checksum mismatch for part {part_path}")
+                  joined_parts.append(text)
+
+              try:
+                  raw = base64.b64decode("".join(joined_parts).encode("ascii"), validate=True)
+              except (binascii.Error, ValueError) as e:
+                  raise ValueError(f"Invalid base64 payload in {bundle_dir}") from e
+
+              if sha256_bytes(raw) != manifest["original_sha256"]:
+                  raise ValueError(f"Final SHA256 mismatch for {bundle_dir}")
+
+              out_path = Path(target_rel)
+              out_path.parent.mkdir(parents=True, exist_ok=True)
+              out_path.write_bytes(raw)
+              restored.append(str(out_path))
+
+          print("Restored:")
+          for path in restored:
+              print(path)
+          PY
+
+      - name: Install package
+        run: |
+          python -m pip install -e .
+
+      - name: Run full test suite
+        run: |
+          pytest -q
+
+      - name: CLI smoke
+        run: |
+          python -m genomeforge.cli examples/minimal.genome --out /tmp/genomeforge_smoke
+          test -f /tmp/genomeforge_smoke/minimal/system.py
+
+      - name: Introspection smoke
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from genomeforge import Compiler
+          import sys
+          import tempfile
+
+          source = Path("examples/connected.genome").read_text(encoding="utf-8")
+          with tempfile.TemporaryDirectory() as tmp:
+              Compiler().compile(source, tmp)
+              sys.path.insert(0, tmp)
+              try:
+                  from connected.system import ConnectedSystem
+                  s = ConnectedSystem()
+                  d = s.describe()
+                  assert isinstance(d, dict)
+                  assert "modules" in d
+                  assert "routes" in d
+                  assert "adapt_rules" in d
+              finally:
+                  sys.path.pop(0)
+          PY
+
+      - name: Version check
+        run: |
+          python - <<'PY'
+          import tomllib
+          from pathlib import Path
+          data = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+          assert data["project"]["version"] == "0.2.0"
+          PY
+
+      - name: Import surface check
+        run: |
+          python - <<'PY'
+          from genomeforge import (
+              Compiler,
+              GenomeEvaluator,
+              EvaluationScenario,
+              BlockchainScenario,
+              ValidationError,
+          )
+          print("import-ok")
+          PY
