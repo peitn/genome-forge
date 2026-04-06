@@ -1,0 +1,21 @@
+{
+  "format": "share-import-big-container.v1",
+  "original_name": "system.py.j2",
+  "original_size_bytes": 2439,
+  "original_sha256": "4ef746ae523262d9effa41c8213a71a70e4cad9d5bdfa7dd54ae69c1988e3abc",
+  "encoding": "base64",
+  "chunk_size_chars": 24000,
+  "part_count": 1,
+  "parts": [
+    {
+      "index": 0,
+      "file": "part_0000.b64",
+      "chars": 3252,
+      "sha256": "73ea89ea508fc5c4fbc3b201ad92a9603ddca6c33b7c8c629ecd0114c4db7984"
+    }
+  ],
+  "commands": {
+    "pack": "python bigcontainer.py pack system.py.j2",
+    "unpack": "python bigcontainer.py unpack --manifest manifest.json --out system.py.j2"
+  }
+}
