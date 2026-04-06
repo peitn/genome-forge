@@ -1,0 +1,85 @@
+name: Restore Big Container Patch Bundle
+
+on:
+  push:
+    branches:
+      - artifact/0-2-0-patch-bundle
+  workflow_dispatch:
+
+jobs:
+  restore-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout artifact branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Restore Big Container bundles
+        run: |
+          python import_all_bigcontainers.py --repo-root . --overwrite
+
+      - name: Install package
+        run: |
+          python -m pip install -e .
+
+      - name: Run full test suite
+        run: |
+          pytest -q
+
+      - name: CLI smoke
+        run: |
+          python -m genomeforge.cli examples/minimal.genome --out /tmp/genomeforge_smoke
+          test -f /tmp/genomeforge_smoke/minimal/system.py
+
+      - name: Introspection smoke
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from genomeforge import Compiler
+          import sys
+          import tempfile
+
+          source = Path("examples/connected.genome").read_text(encoding="utf-8")
+          with tempfile.TemporaryDirectory() as tmp:
+              Compiler().compile(source, tmp)
+              sys.path.insert(0, tmp)
+              try:
+                  from connected.system import ConnectedSystem
+                  s = ConnectedSystem()
+                  d = s.describe()
+                  assert isinstance(d, dict)
+                  assert "modules" in d
+                  assert "routes" in d
+                  assert "adapt_rules" in d
+              finally:
+                  sys.path.pop(0)
+          PY
+
+      - name: Version check
+        run: |
+          python - <<'PY'
+          import tomllib
+          from pathlib import Path
+          data = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+          assert data["project"]["version"] == "0.2.0"
+          PY
+
+      - name: Import surface check
+        run: |
+          python - <<'PY'
+          from genomeforge import (
+              Compiler,
+              GenomeEvaluator,
+              EvaluationScenario,
+              BlockchainScenario,
+              ValidationError,
+          )
+          print("import-ok")
+          PY
