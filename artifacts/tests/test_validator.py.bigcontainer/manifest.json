@@ -1,0 +1,21 @@
+{
+  "format": "share-import-big-container.v1",
+  "original_name": "test_validator.py",
+  "original_size_bytes": 3073,
+  "original_sha256": "db750fe0b1dd354c150d35544d706d4713523f7e25ed971aed6de9e3513ce5e1",
+  "encoding": "base64",
+  "chunk_size_chars": 24000,
+  "part_count": 1,
+  "parts": [
+    {
+      "index": 0,
+      "file": "part_0000.b64",
+      "chars": 4100,
+      "sha256": "8d03d80351a5e5cb7c17ce2f666114be661229b0c405beda7a707161ba5c08da"
+    }
+  ],
+  "commands": {
+    "pack": "python bigcontainer.py pack test_validator.py",
+    "unpack": "python bigcontainer.py unpack --manifest manifest.json --out test_validator.py"
+  }
+}
