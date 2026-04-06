@@ -1,0 +1,21 @@
+{
+  "format": "share-import-big-container.v1",
+  "original_name": "test_traits.py",
+  "original_size_bytes": 903,
+  "original_sha256": "c4a54dbb516bbcb16134a6e5ee62c84ae13c5aba04cbf3888b7eb967f0b9f2e6",
+  "encoding": "base64",
+  "chunk_size_chars": 24000,
+  "part_count": 1,
+  "parts": [
+    {
+      "index": 0,
+      "file": "part_0000.b64",
+      "chars": 1204,
+      "sha256": "5fa9fa9bab2db5e1166e73256c2d2ca0ae27a24309719598152282df5fa19cd4"
+    }
+  ],
+  "commands": {
+    "pack": "python bigcontainer.py pack test_traits.py",
+    "unpack": "python bigcontainer.py unpack --manifest manifest.json --out test_traits.py"
+  }
+}
