@@ -1,0 +1,21 @@
+{
+  "format": "share-import-big-container.v1",
+  "original_name": "errors.py",
+  "original_size_bytes": 917,
+  "original_sha256": "0366b2bb7f8c493567583cc3ff8077a75de42744ef2d087be20056ba435890ff",
+  "encoding": "base64",
+  "chunk_size_chars": 24000,
+  "part_count": 1,
+  "parts": [
+    {
+      "index": 0,
+      "file": "part_0000.b64",
+      "chars": 1224,
+      "sha256": "d79ecd04b7cff92422af67f50169301586fea53fb4cd38f9b75d73b830361542"
+    }
+  ],
+  "commands": {
+    "pack": "python bigcontainer.py pack errors.py",
+    "unpack": "python bigcontainer.py unpack --manifest manifest.json --out errors.py"
+  }
+}
