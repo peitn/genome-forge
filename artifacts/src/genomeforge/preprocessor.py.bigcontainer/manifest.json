@@ -1,0 +1,21 @@
+{
+  "format": "share-import-big-container.v1",
+  "original_name": "preprocessor.py",
+  "original_size_bytes": 2064,
+  "original_sha256": "a6abef1e46415e5a685c0905147d4e40d836a29fe60cdd225bed5179e67b5b99",
+  "encoding": "base64",
+  "chunk_size_chars": 24000,
+  "part_count": 1,
+  "parts": [
+    {
+      "index": 0,
+      "file": "part_0000.b64",
+      "chars": 2752,
+      "sha256": "c009bdffd99f2cf1b2900f970da6d369b06ae9f83b75c9b3a80fd9e8e115d235"
+    }
+  ],
+  "commands": {
+    "pack": "python bigcontainer.py pack preprocessor.py",
+    "unpack": "python bigcontainer.py unpack --manifest manifest.json --out preprocessor.py"
+  }
+}
