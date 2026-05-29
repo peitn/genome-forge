@@ -1,0 +1,8 @@
+[
+  {"id": "cube_basic", "name": "Basic Cube", "tags": ["voxel", "starter"]},
+  {"id": "ramp_45", "name": "45 Degree Ramp", "tags": ["movement", "builder"]},
+  {"id": "fluid_pipe", "name": "Fluid Pipe", "tags": ["water", "puzzle"]},
+  {"id": "heat_core", "name": "Heat Core", "tags": ["thermal", "hazard"]},
+  {"id": "agent_spawn", "name": "Agent Spawn Pad", "tags": ["ai", "gameplay"]},
+  {"id": "fracture_panel", "name": "Fracture Panel", "tags": ["destruction", "physics"]}
+]

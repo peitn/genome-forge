@@ -1,0 +1,25 @@
+name: voxforge_noctilith_studio
+description: Portable Flutter shell for VoxForge / Noctilith with dashboard, 3D studio, game templates, graphics, animation, audio placeholders, and Android signing templates.
+publish_to: 'none'
+version: 0.2.0+2
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/voxforge_manifest.json
+    - assets/templates/game_templates.json
+    - assets/templates/builder_parts.json
+    - assets/graphics/material_palette.json
+    - assets/audio/click.wav
+    - assets/audio/bridge_ping.wav

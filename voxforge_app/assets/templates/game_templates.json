@@ -1,0 +1,30 @@
+[
+  {
+    "name": "Sandbox Builder",
+    "type": "creative",
+    "description": "Creative mode with snap-grid construction and simulation toggles.",
+    "objective": "Build a structure, inject heat, then watch fracture risk climb.",
+    "starter_systems": ["voxel brush", "prefabs", "fluid source", "thermal spike"]
+  },
+  {
+    "name": "Fluid Puzzle",
+    "type": "puzzle",
+    "description": "Route water through destructible voxel channels.",
+    "objective": "Move 40 units of water to the target zone.",
+    "starter_systems": ["water volume", "gates", "erosion", "win trigger"]
+  },
+  {
+    "name": "Arena Runner",
+    "type": "action",
+    "description": "Small starter action mode with moving hazards and pickups.",
+    "objective": "Survive waves while the world changes around you.",
+    "starter_systems": ["player loop", "hazards", "pickups", "score"]
+  },
+  {
+    "name": "Colony Agents",
+    "type": "simulation",
+    "description": "Spawn AI agents and give them resource tasks.",
+    "objective": "Keep energy, heat and structure stability balanced.",
+    "starter_systems": ["agent spawn", "tasks", "resource zones", "heat danger"]
+  }
+]
