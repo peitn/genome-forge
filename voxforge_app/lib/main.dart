@@ -6,23 +6,35 @@ void main() {
   runApp(const VoxForgeApp());
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// THEME
+// ─────────────────────────────────────────────────────────────────────────────
+
+const _bg       = Color(0xFF090B13);
+const _card     = Color(0xFF151827);
+const _accent   = Color(0xFF7C5CFF);
+const _accent2  = Color(0xFF00E5FF);
+const _red      = Color(0xFFFF4B6E);
+const _green    = Color(0xFF00E096);
+const _orange   = Color(0xFFFF9800);
+const _yellow   = Color(0xFFFFEB3B);
+
 class VoxForgeApp extends StatelessWidget {
   const VoxForgeApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'VoxForge Noctilith Studio',
+      title: 'VoxForge Ultimate Studio',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF7C5CFF),
+        colorSchemeSeed: _accent,
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF090B13),
+        scaffoldBackgroundColor: _bg,
         cardTheme: CardThemeData(
-          color: const Color(0xFF151827),
+          color: _card,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         ),
       ),
       home: const VoxForgeShell(),
@@ -30,1547 +42,1334 @@ class VoxForgeApp extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// DATA MODELS
+// ─────────────────────────────────────────────────────────────────────────────
+
+class LogEntry {
+  const LogEntry(this.title, this.detail, [this.level = 'info']);
+  final String title, detail, level;
+}
+
+class CarPart {
+  const CarPart(this.name, this.mass, this.slot);
+  final String name, slot;
+  final double mass;
+}
+
+class MpcCharacter {
+  const MpcCharacter(this.name, this.role, this.category, this.level);
+  final String name, role, category;
+  final int level;
+}
+
+class RobotComponent {
+  const RobotComponent(this.name, this.type, this.power);
+  final String name, type;
+  final double power;
+}
+
+class Vehicle {
+  Vehicle(this.id, this.x, this.z, this.speed, this.type);
+  final String id, type;
+  double x, z, speed;
+}
+
+class RaceState {
+  int lap = 0;
+  double speed = 0;
+  double fuel = 100;
+  double tire = 1.0;
+  double position = 0;
+  bool finished = false;
+  bool boost = false;
+  double grip = 1.0;
+  int tick = 0;
+  List<String> events = [];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SHELL
+// ─────────────────────────────────────────────────────────────────────────────
+
 class VoxForgeShell extends StatefulWidget {
   const VoxForgeShell({super.key});
-
   @override
   State<VoxForgeShell> createState() => _VoxForgeShellState();
 }
 
-class _VoxForgeShellState extends State<VoxForgeShell> with SingleTickerProviderStateMixin {
-  int selectedIndex = 0;
-  int tick = 0;
-  double waterVolume = 32.4;
-  double heat = 0.28;
-  double fractureRisk = 0.07;
-  double aiSignal = 0.42;
-  double brushSize = 2.0;
-  String selectedMaterial = 'Photonic Alloy';
-  String selectedTool = 'Voxel Brush';
-  String selectedGame = 'Sandbox Builder';
-  bool bridgeOnline = true;
-  bool physicsRunning = false;
+class _VoxForgeShellState extends State<VoxForgeShell>
+    with TickerProviderStateMixin {
 
-  late final AnimationController pulseController;
+  int _idx = 0;
+  late final AnimationController _pulse;
 
-  final List<LogEntry> logs = <LogEntry>[
-    const LogEntry('World created', 'MilestoneA seed=1337, chunk grid ready'),
-    const LogEntry('Studio tools ready', 'brush, erase, paint, fluid, fracture and agent spawn'),
-    const LogEntry('Noctilith merge', 'thermal, entropy, fracture and debris bridges available'),
+  final _rng = math.Random(1337);
+  int _tick = 0;
+
+  // Dashboard / fluid
+  double _water = 32.4, _heat = 0.28, _fracture = 0.07, _aiSignal = 0.42;
+
+  // City
+  double _cityHealth = 0.87;
+  String _weather = 'Clear';
+  double _congestion = 0.23;
+  int _activeRoadworks = 2;
+  List<Vehicle> _vehicles = [];
+  bool _simRunning = false;
+
+  // Car builder
+  final List<CarPart> _carParts = const [
+    CarPart('V8 Engine',      220,  'engine'),
+    CarPart('Carbon Chassis', 180,  'chassis'),
+    CarPart('Front Axle',      48,  'axle_f'),
+    CarPart('Rear Axle',       52,  'axle_r'),
+    CarPart('Sport Wheel ×4',  64,  'wheels'),
+    CarPart('Aero Kit',        18,  'aero'),
+    CarPart('Brake System',    22,  'brakes'),
+  ];
+  String _suspension = 'Double Wishbone';
+  double _dragCoeff = 0.31;
+  double _downforce = 0.52;
+  double _zero100  = 3.8;
+  double _braking  = 28.4;
+
+  // Character studio
+  final List<MpcCharacter> _characters = const [
+    MpcCharacter('Zara Knight',    'Guard',      'classic_city',  12),
+    MpcCharacter('Ren Mori',       'Merchant',   'tech_city',     8),
+    MpcCharacter('Cal Oris',       'Engineer',   'industrial',    15),
+    MpcCharacter('Lysa Vance',     'Medic',      'classic_city',  10),
+    MpcCharacter('Drax',           'Enforcer',   'wasteland',     18),
+    MpcCharacter('Nova',           'Hacker',     'tech_city',     14),
+    MpcCharacter('Piett',          'Navigator',  'coastal',       9),
+    MpcCharacter('Kira Sol',       'Pilot',      'sky_city',      16),
+    MpcCharacter('Brick',          'Worker',     'industrial',    7),
+    MpcCharacter('Sable',          'Spy',        'metro',         20),
+    MpcCharacter('Olo',            'Farmer',     'rural',         5),
+    MpcCharacter('Vex',            'Scavenger',  'wasteland',     11),
+  ];
+  String _charFilter = 'All';
+
+  // Robot factory
+  final List<RobotComponent> _robotParts = [
+    RobotComponent('Neural Core',      'CPU',       4.8),
+    RobotComponent('Servo Arm ×2',     'Actuator',  2.2),
+    RobotComponent('LiDAR Sensor',     'Sensor',    1.6),
+    RobotComponent('Torso Frame',      'Structure', 0.0),
+    RobotComponent('Power Cell 4000',  'Power',     3.1),
+  ];
+  bool _robotAssembled = false;
+  double _robotEfficiency = 0.0;
+
+  // 3-D studio
+  String _tool = 'Voxel Brush';
+  String _material = 'Photonic Alloy';
+  double _brushSize = 2;
+  bool _physicsRunning = false;
+  final List<LogEntry> _logs = [
+    const LogEntry('World init',    'Seed=1337, chunk grid ready'),
+    const LogEntry('Studio ready',  '8 tools, 8 materials loaded'),
+    const LogEntry('Engine v0.11.1','VoxForge Ultimate Studio online'),
   ];
 
-  final List<ModuleInfo> modules = const <ModuleInfo>[
-    ModuleInfo('World Core', 'chunks, voxels, save/load', Icons.public, 1.0),
-    ModuleInfo('3D Studio', 'viewport, builder tools, material palette', Icons.view_in_ar, 0.82),
-    ModuleInfo('Simulation', 'fluid, thermal, entropy, fracture', Icons.science, 1.0),
-    ModuleInfo('Game Runtime', 'prepared modes, player loop, objectives', Icons.sports_esports, 0.74),
-    ModuleInfo('Builder', 'snap grid, parts, prefabs', Icons.construction, 0.78),
-    ModuleInfo('Graphics', 'animated painters, palettes, VFX hooks', Icons.auto_awesome, 0.70),
-    ModuleInfo('Audio', 'soundboard hooks and starter WAV assets', Icons.graphic_eq, 0.62),
-    ModuleInfo('Bridge', 'future Python/native/HTTP integration', Icons.hub, 0.58),
-  ];
-
-  final List<String> tools = const <String>[
-    'Voxel Brush',
-    'Eraser',
-    'Material Paint',
-    'Fluid Source',
-    'Heat Injector',
-    'Fracture Probe',
-    'Agent Spawner',
-    'Prefab Stamp',
-  ];
-
-  final List<String> materials = const <String>[
-    'Photonic Alloy',
-    'Stone',
-    'Glass',
-    'Water',
-    'Lava',
-    'Carbon Fiber',
-    'Neon Circuit',
-    'Reactive Foam',
-  ];
-
-  final List<GameTemplate> games = const <GameTemplate>[
-    GameTemplate(
-      'Sandbox Builder',
-      'Creative mode with snap-grid construction and simulation toggles.',
-      Icons.foundation,
-      'Build a structure, inject heat, then watch fracture risk climb.',
-    ),
-    GameTemplate(
-      'Fluid Puzzle',
-      'Route water through destructible voxel channels.',
-      Icons.water_drop,
-      'Goal: move 40 units of water to the blue target zone.',
-    ),
-    GameTemplate(
-      'Arena Runner',
-      'Small starter action mode with moving hazards and pickups.',
-      Icons.directions_run,
-      'Goal: survive waves while the world changes around you.',
-    ),
-    GameTemplate(
-      'Colony Agents',
-      'Spawn AI agents and give them resource tasks.',
-      Icons.groups_3,
-      'Goal: keep energy, heat and structure stability balanced.',
-    ),
-  ];
-
-  final List<AssetItem> assetItems = const <AssetItem>[
-    AssetItem('Glow Grid', 'Animated CustomPainter grid background', Icons.grid_on),
-    AssetItem('Voxel Blocks', 'Procedural isometric voxel blocks', Icons.view_in_ar),
-    AssetItem('Heat Pulse', 'Orange-red animated thermal overlay', Icons.local_fire_department),
-    AssetItem('Fluid Sweep', 'Blue wave overlay for water flow', Icons.water),
-    AssetItem('Impact Click', 'Built-in system click + WAV placeholder', Icons.volume_up),
-    AssetItem('Bridge Ping', 'Short starter WAV asset in assets/audio', Icons.sensors),
-  ];
+  // Race
+  final _race = RaceState();
+  late final AnimationController _raceCtrl;
 
   @override
   void initState() {
     super.initState();
-    pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    )..repeat(reverse: true);
+    _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800))
+      ..repeat(reverse: true);
+    _raceCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 80))
+      ..addListener(_raceTick);
+    _spawnCityVehicles();
   }
 
   @override
   void dispose() {
-    pulseController.dispose();
+    _pulse.dispose();
+    _raceCtrl.dispose();
     super.dispose();
   }
 
-  void appendLog(String title, String message) {
+  void _spawnCityVehicles() {
+    _vehicles = List.generate(12, (i) => Vehicle(
+      'V$i', _rng.nextDouble()*30, _rng.nextDouble()*30,
+      0.3 + _rng.nextDouble()*0.7,
+      i % 3 == 0 ? 'truck' : (i % 2 == 0 ? 'bus' : 'car'),
+    ));
+  }
+
+  void _cityTick() {
+    if (!_simRunning) return;
     setState(() {
-      logs.insert(0, LogEntry(title, message));
-      if (logs.length > 12) {
-        logs.removeLast();
+      _tick++;
+      for (final v in _vehicles) {
+        v.x = (v.x + v.speed * 0.4 + _rng.nextDouble()*0.1) % 32;
+        v.z = (v.z + v.speed * 0.2) % 32;
+      }
+      _congestion = 0.1 + 0.3 * math.sin(_tick * 0.05).abs() + _rng.nextDouble() * 0.05;
+      _cityHealth  = (0.75 + 0.15 * math.cos(_tick * 0.03)).clamp(0, 1);
+      _water    = (32.4 + 3 * math.sin(_tick * 0.07)).abs();
+      _heat     = (0.2  + 0.15 * math.cos(_tick * 0.04)).clamp(0, 1);
+      _fracture = (0.05 + 0.08 * math.sin(_tick * 0.09)).abs().clamp(0, 1);
+      _aiSignal = (0.4  + 0.3  * math.sin(_tick * 0.06)).clamp(0, 1);
+      if (_tick % 8 == 0) {
+        _weather = const ['Clear','Cloudy','Rain','Storm','Fog','Snow'][_rng.nextInt(6)];
+        _activeRoadworks = _rng.nextInt(5);
+      }
+      if (_tick % 5 == 0) {
+        _addLog('Sim tick $_tick',
+            'Health=${(_cityHealth*100).toStringAsFixed(1)}% '
+            'Congestion=${(_congestion*100).toStringAsFixed(0)}%');
       }
     });
   }
 
-  void runDemoTick() {
+  void _raceTick() {
+    if (_race.finished) return;
     setState(() {
-      tick += 10;
-      final double wave = math.sin(tick / 18.0);
-      waterVolume = (waterVolume - 0.18 + wave * 0.03).clamp(18.0, 50.0).toDouble();
-      heat = (heat + 0.025 + math.max(0, wave) * 0.01).clamp(0.0, 1.0).toDouble();
-      fractureRisk = (fractureRisk + heat * 0.018).clamp(0.0, 1.0).toDouble();
-      aiSignal = (aiSignal + 0.04 - fractureRisk * 0.01).clamp(0.0, 1.0).toDouble();
-      logs.insert(
-        0,
-        LogEntry(
-          'Tick $tick',
-          'fluid=${waterVolume.toStringAsFixed(2)}, heat=${heat.toStringAsFixed(2)}, fracture=${fractureRisk.toStringAsFixed(2)}',
-        ),
-      );
-      if (logs.length > 12) {
-        logs.removeLast();
+      _race.tick++;
+      _race.speed = (_race.boost ? 240 : 180) * _race.grip + _rng.nextDouble() * 8;
+      _race.position += _race.speed * 0.001;
+      _race.fuel  = (_race.fuel  - 0.04 - (_race.boost ? 0.1 : 0)).clamp(0, 100);
+      _race.tire  = (_race.tire  - 0.002).clamp(0, 1);
+      _race.grip  = 0.6 + _race.tire * 0.4;
+      if (_race.position >= 1.0 * (_race.lap + 1)) {
+        _race.lap++;
+        _race.events.insert(0, 'Lap ${_race.lap} — ${(_race.speed).toStringAsFixed(0)} km/h');
+        if (_race.lap >= 3) { _race.finished = true; _raceCtrl.stop(); }
       }
+      if (_race.fuel <= 0) { _race.finished = true; _raceCtrl.stop(); }
     });
   }
 
-  void addWater() {
+  void _assembleRobot() {
     setState(() {
-      waterVolume = (waterVolume + 4.5).clamp(0.0, 50.0).toDouble();
-      logs.insert(0, LogEntry('Fluid source', 'Added water volume: ${waterVolume.toStringAsFixed(2)}'));
-      if (logs.length > 12) logs.removeLast();
+      _robotAssembled = true;
+      _robotEfficiency = _robotParts.fold(0.0, (s, p) => s + p.power)
+          / (_robotParts.length * 5.0) * 100;
     });
+    _addLog('Robot assembled', 'Efficiency ${_robotEfficiency.toStringAsFixed(1)}%', 'success');
   }
 
-  void injectHeat() {
-    setState(() {
-      heat = (heat + 0.16).clamp(0.0, 1.0).toDouble();
-      fractureRisk = (fractureRisk + 0.05).clamp(0.0, 1.0).toDouble();
-      logs.insert(0, const LogEntry('Thermal spike', 'Lava cell diffused into material map'));
-      if (logs.length > 12) logs.removeLast();
-    });
+  void _addLog(String t, String d, [String level = 'info']) {
+    _logs.insert(0, LogEntry(t, d, level));
+    if (_logs.length > 20) _logs.removeLast();
   }
 
-  void togglePhysics() {
-    setState(() {
-      physicsRunning = !physicsRunning;
-      logs.insert(
-        0,
-        LogEntry(
-          physicsRunning ? 'Physics started' : 'Physics paused',
-          physicsRunning ? 'Simulation loop is now advancing from UI ticks' : 'World state frozen for editing',
-        ),
-      );
-      if (logs.length > 12) logs.removeLast();
-    });
-  }
-
-  void resetDemo() {
-    setState(() {
-      tick = 0;
-      waterVolume = 32.4;
-      heat = 0.28;
-      fractureRisk = 0.07;
-      aiSignal = 0.42;
-      physicsRunning = false;
-      bridgeOnline = true;
-      selectedMaterial = 'Photonic Alloy';
-      selectedTool = 'Voxel Brush';
-      selectedGame = 'Sandbox Builder';
-      brushSize = 2.0;
-      logs
-        ..clear()
-        ..addAll(const <LogEntry>[
-          LogEntry('World reset', 'MilestoneA seed=1337, baseline state restored'),
-          LogEntry('Bridge check', 'Flutter shell ready for native/backend integration'),
-        ]);
-    });
-  }
+  static const _navItems = [
+    NavigationDestination(icon: Icon(Icons.dashboard_outlined),      selectedIcon: Icon(Icons.dashboard),              label: 'Dashboard'),
+    NavigationDestination(icon: Icon(Icons.location_city_outlined),  selectedIcon: Icon(Icons.location_city),          label: 'City'),
+    NavigationDestination(icon: Icon(Icons.directions_car_outlined), selectedIcon: Icon(Icons.directions_car),         label: 'Cars'),
+    NavigationDestination(icon: Icon(Icons.groups_outlined),         selectedIcon: Icon(Icons.groups),                 label: 'Characters'),
+    NavigationDestination(icon: Icon(Icons.precision_manufacturing_outlined), selectedIcon: Icon(Icons.precision_manufacturing), label: 'Robots'),
+    NavigationDestination(icon: Icon(Icons.view_in_ar_outlined),     selectedIcon: Icon(Icons.view_in_ar),             label: '3D Studio'),
+    NavigationDestination(icon: Icon(Icons.sports_esports_outlined), selectedIcon: Icon(Icons.sports_esports),         label: 'Games'),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final bool wide = MediaQuery.of(context).size.width >= 860;
-    final List<Widget> pages = <Widget>[
-      DashboardScreen(
-        tick: tick,
-        waterVolume: waterVolume,
-        heat: heat,
-        fractureRisk: fractureRisk,
-        aiSignal: aiSignal,
-        modules: modules,
-        logs: logs,
-        bridgeOnline: bridgeOnline,
-        physicsRunning: physicsRunning,
-        onRunTick: runDemoTick,
-        onAddWater: addWater,
-        onInjectHeat: injectHeat,
-        onReset: resetDemo,
-      ),
-      StudioScreen(
-        tick: tick,
-        pulse: pulseController,
-        tools: tools,
-        materials: materials,
-        selectedTool: selectedTool,
-        selectedMaterial: selectedMaterial,
-        brushSize: brushSize,
-        heat: heat,
-        waterVolume: waterVolume,
-        fractureRisk: fractureRisk,
-        onToolChanged: (String value) => setState(() => selectedTool = value),
-        onMaterialChanged: (String value) => setState(() => selectedMaterial = value),
-        onBrushChanged: (double value) => setState(() => brushSize = value),
-        onStamp: () => appendLog('Studio action', '$selectedTool used with $selectedMaterial / brush=${brushSize.toStringAsFixed(1)}'),
-      ),
-      GamesScreen(
-        games: games,
-        selectedGame: selectedGame,
-        tick: tick,
-        physicsRunning: physicsRunning,
-        onGameChanged: (String value) => setState(() => selectedGame = value),
-        onStart: () {
-          HapticFeedback.mediumImpact();
-          appendLog('Game template started', '$selectedGame loaded into prototype runtime');
-        },
-        onTogglePhysics: togglePhysics,
-        onRunTick: runDemoTick,
-      ),
-      AssetsScreen(
-        assetItems: assetItems,
-        pulse: pulseController,
-        onPlaySound: () async {
-          await SystemSound.play(SystemSoundType.click);
-          appendLog('Audio cue', 'Played built-in system click; WAV placeholders are in assets/audio');
-        },
-      ),
-      BuildScreen(
-        bridgeOnline: bridgeOnline,
-        onToggleBridge: () => setState(() {
-          bridgeOnline = !bridgeOnline;
-          logs.insert(0, LogEntry('Bridge state', bridgeOnline ? 'Bridge marked online' : 'Bridge marked offline'));
-          if (logs.length > 12) logs.removeLast();
-        }),
-      ),
-    ];
-
     return Scaffold(
-      body: SafeArea(
-        child: wide
-            ? Row(
-                children: <Widget>[
-                  NavigationRail(
-                    selectedIndex: selectedIndex,
-                    extended: MediaQuery.of(context).size.width >= 1100,
-                    onDestinationSelected: (int value) => setState(() => selectedIndex = value),
-                    destinations: const <NavigationRailDestination>[
-                      NavigationRailDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: Text('Dashboard')),
-                      NavigationRailDestination(icon: Icon(Icons.view_in_ar_outlined), selectedIcon: Icon(Icons.view_in_ar), label: Text('Studio')),
-                      NavigationRailDestination(icon: Icon(Icons.sports_esports_outlined), selectedIcon: Icon(Icons.sports_esports), label: Text('Games')),
-                      NavigationRailDestination(icon: Icon(Icons.auto_awesome_outlined), selectedIcon: Icon(Icons.auto_awesome), label: Text('Assets')),
-                      NavigationRailDestination(icon: Icon(Icons.android_outlined), selectedIcon: Icon(Icons.android), label: Text('Build')),
-                    ],
-                  ),
-                  const VerticalDivider(width: 1),
-                  Expanded(child: IndexedStack(index: selectedIndex, children: pages)),
-                ],
-              )
-            : Column(
-                children: <Widget>[
-                  Expanded(child: IndexedStack(index: selectedIndex, children: pages)),
-                  NavigationBar(
-                    selectedIndex: selectedIndex,
-                    onDestinationSelected: (int value) => setState(() => selectedIndex = value),
-                    destinations: const <NavigationDestination>[
-                      NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Home'),
-                      NavigationDestination(icon: Icon(Icons.view_in_ar_outlined), selectedIcon: Icon(Icons.view_in_ar), label: 'Studio'),
-                      NavigationDestination(icon: Icon(Icons.sports_esports_outlined), selectedIcon: Icon(Icons.sports_esports), label: 'Games'),
-                      NavigationDestination(icon: Icon(Icons.auto_awesome_outlined), selectedIcon: Icon(Icons.auto_awesome), label: 'Assets'),
-                      NavigationDestination(icon: Icon(Icons.android_outlined), selectedIcon: Icon(Icons.android), label: 'Build'),
-                    ],
-                  ),
-                ],
-              ),
+      backgroundColor: _bg,
+      body: IndexedStack(index: _idx, children: [
+        _DashboardScreen(pulse: _pulse, water: _water, heat: _heat,
+            fracture: _fracture, aiSignal: _aiSignal, cityHealth: _cityHealth, logs: _logs),
+        _CityScreen(
+          vehicles: _vehicles, cityHealth: _cityHealth, weather: _weather,
+          congestion: _congestion, roadworks: _activeRoadworks,
+          running: _simRunning, tick: _tick,
+          onToggle: () {
+            setState(() => _simRunning = !_simRunning);
+            if (_simRunning) _citySimLoop();
+          },
+        ),
+        _CarScreen(
+          parts: _carParts, suspension: _suspension, drag: _dragCoeff,
+          downforce: _downforce, zero100: _zero100, braking: _braking,
+          onTune: () => setState(() {
+            _dragCoeff  = 0.25 + _rng.nextDouble() * 0.15;
+            _downforce  = 0.4  + _rng.nextDouble() * 0.3;
+            _zero100    = 3.2  + _rng.nextDouble() * 1.2;
+            _braking    = 22   + _rng.nextDouble() * 10;
+            _suspension = const ['Double Wishbone','MacPherson','Multilink','Active'][_rng.nextInt(4)];
+            _addLog('Car tuned', 'Drag=${_dragCoeff.toStringAsFixed(2)} '
+                'Downforce=${_downforce.toStringAsFixed(2)}');
+          }),
+        ),
+        _CharacterScreen(chars: _characters, filter: _charFilter,
+            onFilter: (f) => setState(() => _charFilter = f)),
+        _RobotScreen(
+          parts: _robotParts, assembled: _robotAssembled,
+          efficiency: _robotEfficiency, onAssemble: _assembleRobot,
+          onReset: () => setState(() { _robotAssembled = false; _robotEfficiency = 0; }),
+        ),
+        _StudioScreen(
+          pulse: _pulse, tool: _tool, material: _material,
+          brushSize: _brushSize, physicsRunning: _physicsRunning, logs: _logs,
+          tools: const ['Voxel Brush','Eraser','Material Paint','Fluid Source',
+                        'Heat Injector','Fracture Probe','Agent Spawner','Prefab Stamp'],
+          materials: const ['Photonic Alloy','Stone','Glass','Water',
+                            'Lava','Carbon Fiber','Neon Circuit','Reactive Foam'],
+          onTool:     (t) => setState(() { _tool = t; _addLog('Tool', t); }),
+          onMaterial: (m) => setState(() => _material = m),
+          onBrush:    (v) => setState(() => _brushSize = v),
+          onPhysics:  () => setState(() {
+            _physicsRunning = !_physicsRunning;
+            _addLog('Physics', _physicsRunning ? 'started' : 'stopped');
+          }),
+        ),
+        _GamesScreen(
+          race: _race,
+          onStartRace: () { if (!_race.finished) _raceCtrl.repeat(); },
+          onBoost: (v) => setState(() => _race.boost = v),
+          onResetRace: () => setState(() {
+            _race
+              ..lap=0 ..speed=0 ..fuel=100 ..tire=1
+              ..position=0 ..finished=false ..boost=false
+              ..grip=1 ..tick=0 ..events.clear();
+            _raceCtrl.stop();
+          }),
+        ),
+      ]),
+      bottomNavigationBar: NavigationBar(
+        backgroundColor: _card,
+        selectedIndex: _idx,
+        indicatorColor: _accent.withValues(alpha: 0.3),
+        onDestinationSelected: (i) => setState(() => _idx = i),
+        destinations: _navItems,
+        labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
       ),
     );
   }
+
+  void _citySimLoop() async {
+    while (_simRunning && mounted) {
+      _cityTick();
+      await Future.delayed(const Duration(milliseconds: 400));
+    }
+  }
 }
 
-class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({
-    required this.tick,
-    required this.waterVolume,
-    required this.heat,
-    required this.fractureRisk,
-    required this.aiSignal,
-    required this.modules,
-    required this.logs,
-    required this.bridgeOnline,
-    required this.physicsRunning,
-    required this.onRunTick,
-    required this.onAddWater,
-    required this.onInjectHeat,
-    required this.onReset,
-    super.key,
-  });
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. DASHBOARD
+// ─────────────────────────────────────────────────────────────────────────────
 
-  final int tick;
-  final double waterVolume;
-  final double heat;
-  final double fractureRisk;
-  final double aiSignal;
-  final List<ModuleInfo> modules;
+class _DashboardScreen extends StatelessWidget {
+  const _DashboardScreen({required this.pulse, required this.water, required this.heat,
+    required this.fracture, required this.aiSignal, required this.cityHealth, required this.logs});
+  final AnimationController pulse;
+  final double water, heat, fracture, aiSignal, cityHealth;
   final List<LogEntry> logs;
-  final bool bridgeOnline;
-  final bool physicsRunning;
-  final VoidCallback onRunTick;
-  final VoidCallback onAddWater;
-  final VoidCallback onInjectHeat;
-  final VoidCallback onReset;
 
   @override
   Widget build(BuildContext context) {
-    return CustomScrollView(
-      slivers: <Widget>[
-        SliverAppBar.large(
-          pinned: true,
-          backgroundColor: const Color(0xFF090B13).withOpacity(0.94),
-          title: const Text('VoxForge / Noctilith'),
-          actions: <Widget>[
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: StatusPill(
-                label: bridgeOnline ? 'bridge ready' : 'offline',
-                icon: bridgeOnline ? Icons.verified : Icons.error_outline,
-              ),
-            ),
-          ],
-        ),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate(<Widget>[
-              HeroPanel(
-                tick: tick,
-                waterVolume: waterVolume,
-                heat: heat,
-                fractureRisk: fractureRisk,
-                aiSignal: aiSignal,
-                physicsRunning: physicsRunning,
-                onRunTick: onRunTick,
-                onAddWater: onAddWater,
-                onInjectHeat: onInjectHeat,
-                onReset: onReset,
-              ),
-              const SizedBox(height: 14),
-              const SectionTitle('Engine modules'),
-              const SizedBox(height: 8),
-              ModuleGrid(modules: modules),
-              const SizedBox(height: 18),
-              const SectionTitle('Mini world viewport'),
-              const SizedBox(height: 8),
-              VoxelViewportCard(
-                tick: tick,
-                waterVolume: waterVolume,
-                heat: heat,
-                fractureRisk: fractureRisk,
-              ),
-              const SizedBox(height: 18),
-              const SectionTitle('Runtime event log'),
-              const SizedBox(height: 8),
-              RuntimeLog(logs: logs),
-            ]),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class StudioScreen extends StatelessWidget {
-  const StudioScreen({
-    required this.tick,
-    required this.pulse,
-    required this.tools,
-    required this.materials,
-    required this.selectedTool,
-    required this.selectedMaterial,
-    required this.brushSize,
-    required this.heat,
-    required this.waterVolume,
-    required this.fractureRisk,
-    required this.onToolChanged,
-    required this.onMaterialChanged,
-    required this.onBrushChanged,
-    required this.onStamp,
-    super.key,
-  });
-
-  final int tick;
-  final Animation<double> pulse;
-  final List<String> tools;
-  final List<String> materials;
-  final String selectedTool;
-  final String selectedMaterial;
-  final double brushSize;
-  final double heat;
-  final double waterVolume;
-  final double fractureRisk;
-  final ValueChanged<String> onToolChanged;
-  final ValueChanged<String> onMaterialChanged;
-  final ValueChanged<double> onBrushChanged;
-  final VoidCallback onStamp;
-
-  @override
-  Widget build(BuildContext context) {
-    final bool wide = MediaQuery.of(context).size.width >= 900;
-    final Widget viewportCard = StudioViewportCard(
-      tick: tick,
-      pulse: pulse,
-      selectedMaterial: selectedMaterial,
-      selectedTool: selectedTool,
-      heat: heat,
-      waterVolume: waterVolume,
-      fractureRisk: fractureRisk,
-    );
-    final Widget panelCard = BuilderPanel(
-      tools: tools,
-      materials: materials,
-      selectedTool: selectedTool,
-      selectedMaterial: selectedMaterial,
-      brushSize: brushSize,
-      onToolChanged: onToolChanged,
-      onMaterialChanged: onMaterialChanged,
-      onBrushChanged: onBrushChanged,
-      onStamp: onStamp,
-    );
-
-    return ScreenScaffold(
-      title: '3D Editing Studio',
-      subtitle: 'Procedural viewport, builder tools, material palette and future backend bridge.',
-      child: wide
-          ? Row(
-              children: <Widget>[
-                Expanded(flex: 3, child: viewportCard),
-                const SizedBox(width: 14),
-                Expanded(flex: 2, child: panelCard),
-              ],
-            )
-          : Column(
-              children: <Widget>[
-                SizedBox(height: 420, child: viewportCard),
-                const SizedBox(height: 14),
-                SizedBox(height: 620, child: panelCard),
-              ],
-            ),
-    );
-  }
-}
-
-class GamesScreen extends StatelessWidget {
-  const GamesScreen({
-    required this.games,
-    required this.selectedGame,
-    required this.tick,
-    required this.physicsRunning,
-    required this.onGameChanged,
-    required this.onStart,
-    required this.onTogglePhysics,
-    required this.onRunTick,
-    super.key,
-  });
-
-  final List<GameTemplate> games;
-  final String selectedGame;
-  final int tick;
-  final bool physicsRunning;
-  final ValueChanged<String> onGameChanged;
-  final VoidCallback onStart;
-  final VoidCallback onTogglePhysics;
-  final VoidCallback onRunTick;
-
-  @override
-  Widget build(BuildContext context) {
-    return ScreenScaffold(
-      title: 'Prepared Games',
-      subtitle: 'Starter modes you can later connect to real world state and player controls.',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints constraints) {
-              final int columns = constraints.maxWidth > 960 ? 4 : constraints.maxWidth > 640 ? 2 : 1;
-              return GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: games.length,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: columns,
-                  childAspectRatio: columns == 1 ? 2.4 : 1.22,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                itemBuilder: (BuildContext context, int index) {
-                  final GameTemplate game = games[index];
-                  return GameTemplateCard(
-                    game: game,
-                    selected: game.name == selectedGame,
-                    onTap: () => onGameChanged(game.name),
-                  );
-                },
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      const Icon(Icons.play_circle),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Runtime control: $selectedGame',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                      StatusPill(label: physicsRunning ? 'running' : 'paused', icon: physicsRunning ? Icons.motion_photos_on : Icons.pause_circle),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text('Tick $tick. This is still a Flutter-side starter loop; replace calls with Python/native/HTTP snapshots later.'),
-                  const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: <Widget>[
-                      FilledButton.icon(onPressed: onStart, icon: const Icon(Icons.rocket_launch), label: const Text('Load game')),
-                      OutlinedButton.icon(onPressed: onTogglePhysics, icon: const Icon(Icons.settings_backup_restore), label: Text(physicsRunning ? 'Pause physics' : 'Start physics')),
-                      OutlinedButton.icon(onPressed: onRunTick, icon: const Icon(Icons.fast_forward), label: const Text('Advance tick')),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class AssetsScreen extends StatelessWidget {
-  const AssetsScreen({
-    required this.assetItems,
-    required this.pulse,
-    required this.onPlaySound,
-    super.key,
-  });
-
-  final List<AssetItem> assetItems;
-  final Animation<double> pulse;
-  final VoidCallback onPlaySound;
-
-  @override
-  Widget build(BuildContext context) {
-    return ScreenScaffold(
-      title: 'Graphics, Animation & Audio',
-      subtitle: 'Small built-in art direction kit: procedural UI graphics, animation timeline and sound hooks.',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Card(
-            child: SizedBox(
-              height: 230,
-              child: AnimatedBuilder(
-                animation: pulse,
-                builder: (BuildContext context, Widget? child) {
-                  return CustomPaint(
-                    painter: AssetShowcasePainter(pulse.value),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text('Procedural showcase', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
-                          const SizedBox(height: 8),
-                          const Text('No external packages required. This uses Flutter CustomPainter animations.'),
-                          const Spacer(),
-                          Wrap(
-                            spacing: 10,
-                            children: <Widget>[
-                              Chip(label: Text('pulse ${(pulse.value * 100).round()}%')),
-                              const Chip(label: Text('glow grid')),
-                              const Chip(label: Text('voxel VFX')),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints constraints) {
-              final int columns = constraints.maxWidth > 980 ? 3 : constraints.maxWidth > 640 ? 2 : 1;
-              return GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: assetItems.length,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: columns,
-                  childAspectRatio: columns == 1 ? 3.0 : 1.75,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                itemBuilder: (BuildContext context, int index) {
-                  final AssetItem item = assetItems[index];
-                  return AssetCard(item: item, onPlaySound: item.title.contains('Click') || item.title.contains('Ping') ? onPlaySound : null);
-                },
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-          const InfoBox(
-            title: 'Audio note',
-            body: 'The app uses SystemSound for a no-dependency click. Real WAV placeholders are included in assets/audio; add a package like audioplayers later when you want full playback.',
-            icon: Icons.info_outline,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class BuildScreen extends StatelessWidget {
-  const BuildScreen({
-    required this.bridgeOnline,
-    required this.onToggleBridge,
-    super.key,
-  });
-
-  final bool bridgeOnline;
-  final VoidCallback onToggleBridge;
-
-  @override
-  Widget build(BuildContext context) {
-    return ScreenScaffold(
-      title: 'Build, Signing & Bridge',
-      subtitle: 'Android signing templates, release notes and future engine-bridge plan.',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      const Icon(Icons.verified_user),
-                      const SizedBox(width: 10),
-                      Expanded(child: Text('Android release signing', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800))),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  const Text('This pack includes key.properties.example, Gradle signing fragment and scripts for generating an upload keystore. It intentionally does not include a real private production key.'),
-                  const SizedBox(height: 12),
-                  const CodeBox('''keytool -genkey -v -keystore ~/upload-keystore.jks \\\n  -keyalg RSA -keysize 2048 -validity 10000 -alias upload'''),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          InfoBox(
-            title: bridgeOnline ? 'Bridge status: online placeholder' : 'Bridge status: offline placeholder',
-            body: 'Later, this should call the Python engine through HTTP/WebSocket, platform channel, FFI, or a native library. For now the UI uses local mock state.',
-            icon: Icons.hub,
-            action: OutlinedButton.icon(onPressed: onToggleBridge, icon: const Icon(Icons.power_settings_new), label: const Text('Toggle bridge')),
-          ),
-          const SizedBox(height: 14),
-          const InfoBox(
-            title: 'Included source input',
-            body: 'The original uploaded voxforge_noctilith_merged.zip is copied into source_input/ so the transfer pack contains both the Flutter shell and the Python prototype archive.',
-            icon: Icons.archive,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class ScreenScaffold extends StatelessWidget {
-  const ScreenScaffold({required this.title, required this.subtitle, required this.child, super.key});
-
-  final String title;
-  final String subtitle;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomScrollView(
-      slivers: <Widget>[
-        SliverAppBar.large(
-          pinned: true,
-          backgroundColor: const Color(0xFF090B13).withOpacity(0.94),
-          title: Text(title),
-        ),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate(<Widget>[
-              Text(subtitle, style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white70)),
-              const SizedBox(height: 16),
-              child,
-            ]),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class HeroPanel extends StatelessWidget {
-  const HeroPanel({
-    required this.tick,
-    required this.waterVolume,
-    required this.heat,
-    required this.fractureRisk,
-    required this.aiSignal,
-    required this.physicsRunning,
-    required this.onRunTick,
-    required this.onAddWater,
-    required this.onInjectHeat,
-    required this.onReset,
-    super.key,
-  });
-
-  final int tick;
-  final double waterVolume;
-  final double heat;
-  final double fractureRisk;
-  final double aiSignal;
-  final bool physicsRunning;
-  final VoidCallback onRunTick;
-  final VoidCallback onAddWater;
-  final VoidCallback onInjectHeat;
-  final VoidCallback onReset;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: <Color>[
-              const Color(0xFF151827),
-              Theme.of(context).colorScheme.primary.withOpacity(0.18),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: <Widget>[
-                  Text('Prototype control deck', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
-                  StatusPill(label: physicsRunning ? 'physics running' : 'edit mode', icon: physicsRunning ? Icons.motion_photos_on : Icons.edit),
-                  StatusPill(label: 'tick $tick', icon: Icons.timer),
-                ],
-              ),
-              const SizedBox(height: 10),
-              const Text('A portable Flutter starter app for VoxForge / Noctilith: world dashboard, 3D studio shell, game templates, graphics/animation/audio kit and Android signing templates.'),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: <Widget>[
-                  FilledButton.icon(onPressed: onRunTick, icon: const Icon(Icons.play_arrow), label: const Text('Run tick')),
-                  OutlinedButton.icon(onPressed: onAddWater, icon: const Icon(Icons.water_drop), label: const Text('Add water')),
-                  OutlinedButton.icon(onPressed: onInjectHeat, icon: const Icon(Icons.local_fire_department), label: const Text('Inject heat')),
-                  TextButton.icon(onPressed: onReset, icon: const Icon(Icons.restart_alt), label: const Text('Reset')),
-                ],
-              ),
-              const SizedBox(height: 18),
-              LayoutBuilder(
-                builder: (BuildContext context, BoxConstraints constraints) {
-                  final bool compact = constraints.maxWidth < 720;
-                  final List<Widget> cards = <Widget>[
-                    MetricCard(label: 'Water', value: waterVolume / 50.0, valueText: waterVolume.toStringAsFixed(1), icon: Icons.water),
-                    MetricCard(label: 'Heat', value: heat, valueText: heat.toStringAsFixed(2), icon: Icons.thermostat),
-                    MetricCard(label: 'Fracture', value: fractureRisk, valueText: fractureRisk.toStringAsFixed(2), icon: Icons.crisis_alert),
-                    MetricCard(label: 'AI signal', value: aiSignal, valueText: aiSignal.toStringAsFixed(2), icon: Icons.psychology),
-                  ];
-                  if (compact) {
-                    return Column(children: cards.map((Widget child) => Padding(padding: const EdgeInsets.only(bottom: 8), child: child)).toList());
-                  }
-                  return Row(children: cards.map((Widget child) => Expanded(child: Padding(padding: const EdgeInsets.only(right: 8), child: child))).toList());
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class MetricCard extends StatelessWidget {
-  const MetricCard({required this.label, required this.value, required this.valueText, required this.icon, super.key});
-
-  final String label;
-  final double value;
-  final String valueText;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(children: <Widget>[Icon(icon, size: 18), const SizedBox(width: 8), Text(label)]),
-          const SizedBox(height: 8),
-          Text(valueText, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
-          LinearProgressIndicator(value: value.clamp(0.0, 1.0)),
-        ],
-      ),
-    );
-  }
-}
-
-class ModuleGrid extends StatelessWidget {
-  const ModuleGrid({required this.modules, super.key});
-
-  final List<ModuleInfo> modules;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final int columns = constraints.maxWidth > 980 ? 4 : constraints.maxWidth > 650 ? 2 : 1;
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: modules.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            childAspectRatio: columns == 1 ? 3.2 : 1.85,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-          ),
-          itemBuilder: (BuildContext context, int index) => ModuleCard(info: modules[index]),
-        );
-      },
-    );
-  }
-}
-
-class ModuleCard extends StatelessWidget {
-  const ModuleCard({required this.info, super.key});
-
-  final ModuleInfo info;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(children: <Widget>[Icon(info.icon), const SizedBox(width: 10), Expanded(child: Text(info.name, style: const TextStyle(fontWeight: FontWeight.w800)))]),
-            const SizedBox(height: 8),
-            Text(info.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70)),
-            const Spacer(),
-            LinearProgressIndicator(value: info.readiness),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class VoxelViewportCard extends StatelessWidget {
-  const VoxelViewportCard({required this.tick, required this.waterVolume, required this.heat, required this.fractureRisk, super.key});
-
-  final int tick;
-  final double waterVolume;
-  final double heat;
-  final double fractureRisk;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: SizedBox(
-        height: 260,
-        child: CustomPaint(
-          painter: MiniWorldPainter(tick: tick, heat: heat, waterVolume: waterVolume, fractureRisk: fractureRisk),
-          child: const Align(
-            alignment: Alignment.bottomLeft,
-            child: Padding(
-              padding: EdgeInsets.all(14),
-              child: StatusPill(label: 'procedural preview', icon: Icons.memory),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class StudioViewportCard extends StatelessWidget {
-  const StudioViewportCard({
-    required this.tick,
-    required this.pulse,
-    required this.selectedMaterial,
-    required this.selectedTool,
-    required this.heat,
-    required this.waterVolume,
-    required this.fractureRisk,
-    super.key,
-  });
-
-  final int tick;
-  final Animation<double> pulse;
-  final String selectedMaterial;
-  final String selectedTool;
-  final double heat;
-  final double waterVolume;
-  final double fractureRisk;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: AnimatedBuilder(
-        animation: pulse,
-        builder: (BuildContext context, Widget? child) {
-          return CustomPaint(
-            painter: StudioViewportPainter(
-              tick: tick,
-              pulse: pulse.value,
-              materialName: selectedMaterial,
-              toolName: selectedTool,
-              heat: heat,
-              waterVolume: waterVolume,
-              fractureRisk: fractureRisk,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      const Icon(Icons.view_in_ar),
-                      const SizedBox(width: 10),
-                      Expanded(child: Text('Viewport: $selectedTool / $selectedMaterial', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900))),
-                    ],
-                  ),
-                  const Spacer(),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: <Widget>[
-                      Chip(label: Text('tick $tick')),
-                      Chip(label: Text('heat ${heat.toStringAsFixed(2)}')),
-                      Chip(label: Text('fracture ${fractureRisk.toStringAsFixed(2)}')),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class BuilderPanel extends StatelessWidget {
-  const BuilderPanel({
-    required this.tools,
-    required this.materials,
-    required this.selectedTool,
-    required this.selectedMaterial,
-    required this.brushSize,
-    required this.onToolChanged,
-    required this.onMaterialChanged,
-    required this.onBrushChanged,
-    required this.onStamp,
-    super.key,
-  });
-
-  final List<String> tools;
-  final List<String> materials;
-  final String selectedTool;
-  final String selectedMaterial;
-  final double brushSize;
-  final ValueChanged<String> onToolChanged;
-  final ValueChanged<String> onMaterialChanged;
-  final ValueChanged<double> onBrushChanged;
-  final VoidCallback onStamp;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: ListView(
-          children: <Widget>[
-            Text('Builder tools', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
-            const SizedBox(height: 8),
-            const Text('Starter editor controls. Hook these into real engine commands later.'),
-            const SizedBox(height: 16),
-            Text('Tool', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: tools.map((String tool) {
-                return ChoiceChip(
-                  label: Text(tool),
-                  selected: selectedTool == tool,
-                  onSelected: (_) => onToolChanged(tool),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 18),
-            Text('Material', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: materials.map((String material) {
-                return ChoiceChip(
-                  label: Text(material),
-                  selected: selectedMaterial == material,
-                  onSelected: (_) => onMaterialChanged(material),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 18),
-            Text('Brush size: ${brushSize.toStringAsFixed(1)}'),
-            Slider(value: brushSize, min: 1.0, max: 8.0, divisions: 14, onChanged: onBrushChanged),
-            const SizedBox(height: 12),
-            FilledButton.icon(onPressed: onStamp, icon: const Icon(Icons.add_box), label: const Text('Apply editor command')),
-            const SizedBox(height: 14),
-            const InfoBox(
-              title: 'Prepared creation tools',
-              body: 'Brush, eraser, material paint, fluid source, heat injector, fracture probe, agent spawner and prefab stamp are represented in the UI and ready to be wired to engine commands.',
-              icon: Icons.tips_and_updates,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class GameTemplateCard extends StatelessWidget {
-  const GameTemplateCard({required this.game, required this.selected, required this.onTap, super.key});
-
-  final GameTemplate game;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(24),
-      onTap: onTap,
-      child: Card(
-        color: selected ? Theme.of(context).colorScheme.primary.withOpacity(0.22) : null,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(children: <Widget>[Icon(game.icon), const SizedBox(width: 10), Expanded(child: Text(game.name, style: const TextStyle(fontWeight: FontWeight.w900)))]),
-              const SizedBox(height: 8),
-              Text(game.description, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70)),
-              const Spacer(),
-              Text(game.objective, maxLines: 2, overflow: TextOverflow.ellipsis),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class AssetCard extends StatelessWidget {
-  const AssetCard({required this.item, this.onPlaySound, super.key});
-
-  final AssetItem item;
-  final VoidCallback? onPlaySound;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
+    return CustomScrollView(slivers: [
+      const SliverAppBar(pinned: true, backgroundColor: _bg,
+        title: Text('VoxForge Ultimate Studio',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
+      SliverPadding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(children: <Widget>[Icon(item.icon), const SizedBox(width: 10), Expanded(child: Text(item.title, style: const TextStyle(fontWeight: FontWeight.w900)))]),
-            const SizedBox(height: 8),
-            Text(item.description, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70)),
-            const Spacer(),
-            if (onPlaySound != null) OutlinedButton.icon(onPressed: onPlaySound, icon: const Icon(Icons.play_arrow), label: const Text('Play cue')),
-          ],
+        sliver: SliverGrid(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 1.35),
+          delegate: SliverChildListDelegate([
+            _MetricCard('Water',       '${water.toStringAsFixed(1)} m³',         Icons.water,                 _accent2, water / 50),
+            _MetricCard('Heat',        '${(heat*100).toStringAsFixed(0)}%',       Icons.local_fire_department, _orange,  heat),
+            _MetricCard('Fracture',    '${(fracture*100).toStringAsFixed(0)}%',   Icons.broken_image,          _red,     fracture),
+            _MetricCard('AI Signal',   '${(aiSignal*100).toStringAsFixed(0)}%',   Icons.hub,                   _green,   aiSignal),
+            _MetricCard('City Health', '${(cityHealth*100).toStringAsFixed(0)}%', Icons.location_city,         _accent,  cityHealth),
+            _MetricCard('Platform',    'v0.1 Online',                             Icons.verified,              _green,   1.0),
+          ]),
         ),
       ),
-    );
+      SliverPadding(padding: const EdgeInsets.symmetric(horizontal: 16),
+          sliver: SliverToBoxAdapter(child: _ModuleGrid())),
+      SliverPadding(padding: const EdgeInsets.all(16),
+          sliver: SliverToBoxAdapter(child: _LogCard(logs: logs))),
+    ]);
   }
 }
 
-class RuntimeLog extends StatelessWidget {
-  const RuntimeLog({required this.logs, super.key});
+class _MetricCard extends StatelessWidget {
+  const _MetricCard(this.label, this.value, this.icon, this.color, this.progress);
+  final String label, value;
+  final IconData icon;
+  final Color color;
+  final double progress;
 
+  @override
+  Widget build(BuildContext context) {
+    return Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 6),
+          Text(label, style: const TextStyle(fontSize: 12, color: Colors.white54)),
+        ]),
+        const Spacer(),
+        Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+        const SizedBox(height: 8),
+        ClipRRect(borderRadius: BorderRadius.circular(4), child: LinearProgressIndicator(
+          value: progress.clamp(0.0, 1.0), minHeight: 4,
+          backgroundColor: Colors.white12, color: color)),
+      ],
+    )));
+  }
+}
+
+class _ModuleGrid extends StatelessWidget {
+  static const _modules = [
+    ('World Core',       Icons.public,                     1.0),
+    ('City Builder',     Icons.location_city,              0.87),
+    ('Vehicle Builder',  Icons.directions_car,             0.82),
+    ('Character Studio', Icons.groups,                     0.79),
+    ('Robot Factory',    Icons.precision_manufacturing,    0.74),
+    ('3D Studio',        Icons.view_in_ar,                 0.82),
+    ('Game Runtime',     Icons.sports_esports,             0.74),
+    ('Reality Physics',  Icons.science,                    0.68),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Platform Modules',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
+        const SizedBox(height: 12),
+        ..._modules.map((m) => Padding(padding: const EdgeInsets.only(bottom: 8),
+          child: Row(children: [
+            Icon(m.$2, size: 16, color: _accent),
+            const SizedBox(width: 8),
+            Expanded(child: Text(m.$1, style: const TextStyle(fontSize: 13))),
+            Text('${(m.$3*100).toStringAsFixed(0)}%',
+                style: const TextStyle(fontSize: 12, color: Colors.white54)),
+            const SizedBox(width: 8),
+            SizedBox(width: 80, child: ClipRRect(borderRadius: BorderRadius.circular(3),
+              child: LinearProgressIndicator(value: m.$3, minHeight: 4,
+                  backgroundColor: Colors.white12, color: _accent))),
+          ]))),
+      ],
+    )));
+  }
+}
+
+class _LogCard extends StatelessWidget {
+  const _LogCard({required this.logs});
   final List<LogEntry> logs;
 
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: logs
-              .map((LogEntry entry) => ListTile(
-                    dense: true,
-                    leading: const Icon(Icons.terminal),
-                    title: Text(entry.title, style: const TextStyle(fontWeight: FontWeight.w800)),
-                    subtitle: Text(entry.message),
-                  ))
-              .toList(),
-        ),
-      ),
-    );
-  }
-}
-
-class SectionTitle extends StatelessWidget {
-  const SectionTitle(this.text, {super.key});
-
-  final String text;
+  Color _col(String l) =>
+      l == 'success' ? _green : l == 'warn' ? _orange : l == 'error' ? _red : Colors.white54;
 
   @override
   Widget build(BuildContext context) {
-    return Text(text, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900));
+    return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Event Log',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
+        const SizedBox(height: 8),
+        ...logs.take(8).map((e) => Padding(padding: const EdgeInsets.only(bottom: 6),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Container(width: 6, height: 6, margin: const EdgeInsets.only(top: 4, right: 8),
+                decoration: BoxDecoration(shape: BoxShape.circle, color: _col(e.level))),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(e.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              Text(e.detail, style: const TextStyle(fontSize: 11, color: Colors.white38)),
+            ])),
+          ]))),
+      ],
+    )));
   }
 }
 
-class StatusPill extends StatelessWidget {
-  const StatusPill({required this.label, required this.icon, super.key});
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. CITY BUILDER
+// ─────────────────────────────────────────────────────────────────────────────
 
-  final String label;
-  final IconData icon;
+class _CityScreen extends StatelessWidget {
+  const _CityScreen({required this.vehicles, required this.cityHealth,
+    required this.weather, required this.congestion, required this.roadworks,
+    required this.running, required this.tick, required this.onToggle});
+  final List<Vehicle> vehicles;
+  final double cityHealth, congestion;
+  final String weather;
+  final int roadworks, tick;
+  final bool running;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[Icon(icon, size: 16), const SizedBox(width: 6), Text(label)],
-      ),
-    );
+    return CustomScrollView(slivers: [
+      SliverAppBar(pinned: true, backgroundColor: _bg,
+        title: const Text('City Builder Studio'),
+        actions: [Padding(padding: const EdgeInsets.only(right: 12),
+          child: FilledButton.icon(
+            onPressed: onToggle,
+            icon: Icon(running ? Icons.stop : Icons.play_arrow, size: 18),
+            label: Text(running ? 'Stop' : 'Simulate'),
+            style: FilledButton.styleFrom(backgroundColor: running ? _red : _green)))]),
+      SliverPadding(padding: const EdgeInsets.all(16), sliver: SliverToBoxAdapter(
+        child: Column(children: [
+          Row(children: [
+            Expanded(child: _StatChip('City Health', '${(cityHealth*100).toStringAsFixed(1)}%', _green)),
+            const SizedBox(width: 8),
+            Expanded(child: _StatChip('Congestion', '${(congestion*100).toStringAsFixed(0)}%', _orange)),
+            const SizedBox(width: 8),
+            Expanded(child: _StatChip('Weather', weather, _accent2)),
+          ]),
+          const SizedBox(height: 8),
+          Row(children: [
+            Expanded(child: _StatChip('Vehicles', '${vehicles.length}', _accent)),
+            const SizedBox(width: 8),
+            Expanded(child: _StatChip('Roadworks', '$roadworks zones', _yellow)),
+            const SizedBox(width: 8),
+            Expanded(child: _StatChip('Tick', '$tick', Colors.white54)),
+          ]),
+          const SizedBox(height: 16),
+          Card(child: SizedBox(height: 260,
+            child: ClipRRect(borderRadius: BorderRadius.circular(20),
+              child: CustomPaint(
+                  painter: _CityPainter(vehicles: vehicles, congestion: congestion))))),
+          const SizedBox(height: 16),
+          Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Traffic Lights',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
+              const SizedBox(height: 12),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+                _TrafficLight('North', congestion < 0.3 ? 'green' : congestion < 0.6 ? 'yellow' : 'red'),
+                _TrafficLight('South', congestion < 0.4 ? 'green' : 'red'),
+                _TrafficLight('East',  congestion < 0.5 ? 'green' : 'yellow'),
+                _TrafficLight('West',  congestion < 0.2 ? 'green' : congestion < 0.7 ? 'yellow' : 'red'),
+              ]),
+            ],
+          ))),
+          const SizedBox(height: 16),
+          Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Active Vehicles (${vehicles.length})',
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
+              const SizedBox(height: 8),
+              ...vehicles.take(6).map((v) => Padding(padding: const EdgeInsets.only(bottom: 6),
+                child: Row(children: [
+                  Icon(v.type == 'truck' ? Icons.local_shipping
+                      : v.type == 'bus' ? Icons.directions_bus : Icons.directions_car,
+                      size: 16, color: _accent),
+                  const SizedBox(width: 8),
+                  Text(v.id, style: const TextStyle(fontSize: 12)),
+                  const Spacer(),
+                  Text('(${v.x.toStringAsFixed(0)},${v.z.toStringAsFixed(0)})',
+                      style: const TextStyle(fontSize: 11, color: Colors.white38)),
+                  const SizedBox(width: 8),
+                  Text('${(v.speed*60).toStringAsFixed(0)} km/h',
+                      style: const TextStyle(fontSize: 11, color: _accent2)),
+                ]))),
+            ],
+          ))),
+        ]),
+      )),
+    ]);
   }
 }
 
-class InfoBox extends StatelessWidget {
-  const InfoBox({required this.title, required this.body, required this.icon, this.action, super.key});
-
-  final String title;
-  final String body;
-  final IconData icon;
-  final Widget? action;
-
+class _StatChip extends StatelessWidget {
+  const _StatChip(this.label, this.value, this.color);
+  final String label, value;
+  final Color color;
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.055),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Icon(icon),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
-                const SizedBox(height: 6),
-                Text(body, style: const TextStyle(color: Colors.white70)),
-                if (action != null) ...<Widget>[const SizedBox(height: 10), action!],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Card(child: Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    child: Column(children: [
+      Text(label, style: const TextStyle(fontSize: 10, color: Colors.white38)),
+      const SizedBox(height: 4),
+      Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
+    ]),
+  ));
 }
 
-class CodeBox extends StatelessWidget {
-  const CodeBox(this.text, {super.key});
-
-  final String text;
-
+class _TrafficLight extends StatelessWidget {
+  const _TrafficLight(this.dir, this.state);
+  final String dir, state;
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.36),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-      ),
-      child: Text(text, style: const TextStyle(fontFamily: 'monospace')),
-    );
-  }
+  Widget build(BuildContext context) => Column(children: [
+    Text(dir, style: const TextStyle(fontSize: 10, color: Colors.white38)),
+    const SizedBox(height: 4),
+    Container(width: 18, height: 18, decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      color: state == 'green' ? _green : state == 'yellow' ? _yellow : _red,
+      boxShadow: [BoxShadow(
+        color: (state == 'green' ? _green : state == 'yellow' ? _yellow : _red)
+            .withValues(alpha: 0.6),
+        blurRadius: 8)],
+    )),
+  ]);
 }
 
-class MiniWorldPainter extends CustomPainter {
-  MiniWorldPainter({required this.tick, required this.heat, required this.waterVolume, required this.fractureRisk});
-
-  final int tick;
-  final double heat;
-  final double waterVolume;
-  final double fractureRisk;
+class _CityPainter extends CustomPainter {
+  const _CityPainter({required this.vehicles, required this.congestion});
+  final List<Vehicle> vehicles;
+  final double congestion;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint bg = Paint()
-      ..shader = const LinearGradient(
-        colors: <Color>[Color(0xFF111426), Color(0xFF070913)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ).createShader(Offset.zero & size);
-    canvas.drawRect(Offset.zero & size, bg);
+    canvas.drawRect(Offset.zero & size, Paint()..color = const Color(0xFF0D1117));
+    final road = Paint()..color = const Color(0xFF1E2533)..strokeWidth = 10;
+    for (int i = 1; i < 4; i++) {
+      canvas.drawLine(Offset(size.width*i/4, 0), Offset(size.width*i/4, size.height), road);
+      canvas.drawLine(Offset(0, size.height*i/4), Offset(size.width, size.height*i/4), road);
+    }
+    final bld = Paint()..color = const Color(0xFF1A2340);
+    final rng = math.Random(42);
+    for (int i = 0; i < 20; i++) {
+      canvas.drawRect(Rect.fromLTWH(
+        rng.nextDouble()*size.width*0.85, rng.nextDouble()*size.height*0.85,
+        12+rng.nextDouble()*20, 18+rng.nextDouble()*40), bld);
+    }
+    for (final v in vehicles) {
+      final col = v.type == 'truck' ? _orange : v.type == 'bus' ? _yellow : _accent2;
+      canvas.drawCircle(
+          Offset(v.x/32*size.width, v.z/32*size.height), 4, Paint()..color = col);
+    }
+    if (congestion > 0.5) {
+      canvas.drawRect(Offset.zero & size,
+          Paint()..color = _red.withValues(alpha: (congestion-0.5)*0.3));
+    }
+  }
 
-    final double block = math.min(size.width / 11, 26);
-    final Offset origin = Offset(size.width * 0.50, size.height * 0.30);
-    final Paint line = Paint()
-      ..color = Colors.white.withOpacity(0.08)
-      ..style = PaintingStyle.stroke;
+  @override
+  bool shouldRepaint(_CityPainter _) => true;
+}
 
-    for (int x = -5; x <= 5; x++) {
-      for (int y = -3; y <= 3; y++) {
-        final Offset p = iso(origin, x.toDouble(), y.toDouble(), 0, block);
-        final Path diamond = Path()
-          ..moveTo(p.dx, p.dy - block * 0.35)
-          ..lineTo(p.dx + block * 0.72, p.dy)
-          ..lineTo(p.dx, p.dy + block * 0.35)
-          ..lineTo(p.dx - block * 0.72, p.dy)
-          ..close();
-        canvas.drawPath(diamond, line);
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. CAR BUILDER
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _CarScreen extends StatelessWidget {
+  const _CarScreen({required this.parts, required this.suspension,
+    required this.drag, required this.downforce, required this.zero100,
+    required this.braking, required this.onTune});
+  final List<CarPart> parts;
+  final String suspension;
+  final double drag, downforce, zero100, braking;
+  final VoidCallback onTune;
+
+  double get _totalMass => parts.fold(0, (s, p) => s + p.mass);
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomScrollView(slivers: [
+      SliverAppBar(pinned: true, backgroundColor: _bg,
+        title: const Text('Car Builder Studio'),
+        actions: [Padding(padding: const EdgeInsets.only(right: 12),
+          child: FilledButton.icon(onPressed: onTune,
+            icon: const Icon(Icons.tune, size: 18), label: const Text('Tune'),
+            style: FilledButton.styleFrom(backgroundColor: _accent)))]),
+      SliverPadding(padding: const EdgeInsets.all(16), sliver: SliverToBoxAdapter(
+        child: Column(children: [
+          Card(child: SizedBox(height: 180, child: CustomPaint(painter: _CarPainter()))),
+          const SizedBox(height: 16),
+          Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Physics Report',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
+              const SizedBox(height: 12),
+              _PhysRow('Total Mass',  '${_totalMass.toStringAsFixed(0)} kg', Icons.scale),
+              _PhysRow('Drag Coeff',  drag.toStringAsFixed(3),               Icons.air),
+              _PhysRow('Downforce',   downforce.toStringAsFixed(3),          Icons.arrow_downward),
+              _PhysRow('0–100 km/h',  '${zero100.toStringAsFixed(1)} s',     Icons.speed),
+              _PhysRow('Brake 100→0', '${braking.toStringAsFixed(1)} m',     Icons.stop_circle),
+              _PhysRow('Suspension',  suspension,                            Icons.settings),
+            ],
+          ))),
+          const SizedBox(height: 16),
+          Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Components',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
+              const SizedBox(height: 8),
+              ...parts.map((p) => _PartRow(p)),
+            ],
+          ))),
+        ]),
+      )),
+    ]);
+  }
+}
+
+class _PhysRow extends StatelessWidget {
+  const _PhysRow(this.label, this.value, this.icon);
+  final String label, value;
+  final IconData icon;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Row(children: [
+      Icon(icon, size: 15, color: _accent), const SizedBox(width: 8),
+      Expanded(child: Text(label, style: const TextStyle(fontSize: 13, color: Colors.white70))),
+      Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _accent2)),
+    ]));
+}
+
+class _PartRow extends StatelessWidget {
+  const _PartRow(this.part);
+  final CarPart part;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Row(children: [
+      Container(width: 8, height: 8, margin: const EdgeInsets.only(right: 10),
+          decoration: const BoxDecoration(shape: BoxShape.circle, color: _accent)),
+      Expanded(child: Text(part.name, style: const TextStyle(fontSize: 13))),
+      Text(part.slot, style: const TextStyle(fontSize: 11, color: Colors.white38)),
+      const SizedBox(width: 12),
+      Text('${part.mass.toStringAsFixed(0)} kg',
+          style: const TextStyle(fontSize: 12, color: _accent2)),
+    ]));
+}
+
+class _CarPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width/2, cy = size.height/2;
+    canvas.drawRRect(RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(cx, cy), width: 160, height: 60),
+        const Radius.circular(14)), Paint()..color = _accent);
+    canvas.drawRRect(RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(cx, cy-28), width: 90, height: 36),
+        const Radius.circular(12)), Paint()..color = const Color(0xFF5A3FCC));
+    final wheel = Paint()..color = const Color(0xFF1A1A2E);
+    final rim   = Paint()..color = Colors.white30..style = PaintingStyle.stroke..strokeWidth = 2;
+    for (final pos in [Offset(cx-52, cy+22), Offset(cx+52, cy+22)]) {
+      canvas.drawCircle(pos, 18, wheel);
+      canvas.drawCircle(pos, 12, rim);
+    }
+    canvas.drawCircle(Offset(cx+72, cy-8), 6, Paint()..color = _yellow);
+    canvas.drawCircle(Offset(cx-72, cy-8), 6, Paint()..color = _yellow.withValues(alpha: 0.4));
+    canvas.drawLine(Offset(cx-80, cy-30), Offset(cx+80, cy-30),
+        Paint()..color = _accent2..strokeWidth = 2..strokeCap = StrokeCap.round);
+  }
+  @override
+  bool shouldRepaint(_) => false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4. CHARACTER STUDIO
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _CharacterScreen extends StatelessWidget {
+  const _CharacterScreen({required this.chars, required this.filter, required this.onFilter});
+  final List<MpcCharacter> chars;
+  final String filter;
+  final ValueChanged<String> onFilter;
+
+  static const _categories = [
+    'All','classic_city','tech_city','industrial','wasteland','coastal','sky_city','rural','metro',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = filter == 'All' ? chars : chars.where((c) => c.category == filter).toList();
+    return CustomScrollView(slivers: [
+      SliverAppBar(
+        pinned: true, backgroundColor: _bg,
+        title: const Text('Character Studio'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: SizedBox(height: 48, child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            itemCount: _categories.length,
+            itemBuilder: (_, i) => Padding(padding: const EdgeInsets.only(right: 8),
+              child: FilterChip(
+                label: Text(_categories[i], style: const TextStyle(fontSize: 12)),
+                selected: filter == _categories[i],
+                onSelected: (_) => onFilter(_categories[i]),
+                selectedColor: _accent.withValues(alpha: 0.3),
+                checkmarkColor: _accent))))),
+      ),
+      SliverPadding(
+        padding: const EdgeInsets.all(16),
+        sliver: SliverGrid(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 1.1),
+          delegate: SliverChildBuilderDelegate(
+            (_, i) => _CharCard(filtered[i]), childCount: filtered.length),
+        ),
+      ),
+    ]);
+  }
+}
+
+class _CharCard extends StatelessWidget {
+  const _CharCard(this.char);
+  final MpcCharacter char;
+
+  static const _roleColors = {
+    'Guard': _red, 'Merchant': _yellow, 'Engineer': _accent2,
+    'Medic': _green, 'Enforcer': _red, 'Hacker': _accent,
+    'Navigator': _accent2, 'Pilot': _accent, 'Worker': Colors.white54,
+    'Spy': _orange, 'Farmer': _green, 'Scavenger': _orange,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final col = _roleColors[char.role] ?? Colors.white70;
+    return Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          CircleAvatar(radius: 18,
+            backgroundColor: col.withValues(alpha: 0.15),
+            child: Text(char.name[0], style: TextStyle(color: col, fontWeight: FontWeight.bold))),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+                color: col.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
+            child: Text(char.role, style: TextStyle(fontSize: 10, color: col))),
+        ]),
+        const SizedBox(height: 10),
+        Text(char.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        Text(char.category, style: const TextStyle(fontSize: 11, color: Colors.white38)),
+        const Spacer(),
+        Row(children: [
+          const Icon(Icons.star, size: 13, color: _yellow),
+          const SizedBox(width: 4),
+          Text('Lv ${char.level}', style: const TextStyle(fontSize: 12, color: Colors.white54)),
+        ]),
+      ],
+    )));
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5. ROBOT FACTORY
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _RobotScreen extends StatelessWidget {
+  const _RobotScreen({required this.parts, required this.assembled,
+    required this.efficiency, required this.onAssemble, required this.onReset});
+  final List<RobotComponent> parts;
+  final bool assembled;
+  final double efficiency;
+  final VoidCallback onAssemble, onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomScrollView(slivers: [
+      SliverAppBar(pinned: true, backgroundColor: _bg,
+        title: const Text('Robot Factory Studio'),
+        actions: [Padding(padding: const EdgeInsets.only(right: 12),
+          child: assembled
+            ? OutlinedButton.icon(onPressed: onReset,
+                icon: const Icon(Icons.refresh, size: 16), label: const Text('Reset'))
+            : FilledButton.icon(onPressed: onAssemble,
+                icon: const Icon(Icons.build, size: 16), label: const Text('Assemble'),
+                style: FilledButton.styleFrom(backgroundColor: _accent)))]),
+      SliverPadding(padding: const EdgeInsets.all(16), sliver: SliverToBoxAdapter(
+        child: Column(children: [
+          Card(child: SizedBox(height: 220,
+            child: CustomPaint(painter: _RobotPainter(assembled: assembled)))),
+          const SizedBox(height: 16),
+          if (assembled) ...[
+            Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Assembly Report',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
+                const SizedBox(height: 12),
+                Row(children: [
+                  const Text('Efficiency', style: TextStyle(color: Colors.white54)),
+                  const Spacer(),
+                  Text('${efficiency.toStringAsFixed(1)}%', style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: efficiency > 70 ? _green : efficiency > 40 ? _orange : _red)),
+                ]),
+                const SizedBox(height: 8),
+                ClipRRect(borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: efficiency/100, minHeight: 8, backgroundColor: Colors.white12,
+                    color: efficiency > 70 ? _green : efficiency > 40 ? _orange : _red)),
+                const SizedBox(height: 12),
+                const Text('Status: ✓ ASSEMBLED',
+                    style: TextStyle(color: _green, fontWeight: FontWeight.bold)),
+              ],
+            ))),
+            const SizedBox(height: 16),
+          ],
+          Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Components',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
+              const SizedBox(height: 8),
+              ...parts.map((p) => _RobotPartRow(p, assembled)),
+            ],
+          ))),
+        ]),
+      )),
+    ]);
+  }
+}
+
+class _RobotPartRow extends StatelessWidget {
+  const _RobotPartRow(this.p, this.active);
+  final RobotComponent p;
+  final bool active;
+
+  Color _typeColor() => p.type == 'CPU'       ? _accent
+      : p.type == 'Actuator'  ? _accent2
+      : p.type == 'Sensor'    ? _green
+      : p.type == 'Power'     ? _yellow
+      : Colors.white38;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Row(children: [
+      Container(width: 8, height: 8, margin: const EdgeInsets.only(right: 10),
+          decoration: BoxDecoration(
+              shape: BoxShape.circle, color: active ? _typeColor() : Colors.white24)),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(p.name, style: const TextStyle(fontSize: 13)),
+        Text(p.type, style: TextStyle(fontSize: 11, color: _typeColor())),
+      ])),
+      if (p.power > 0) ...[
+        Text('${(p.power/5*100).toStringAsFixed(0)}%',
+            style: TextStyle(fontSize: 12, color: active ? _typeColor() : Colors.white38)),
+        const SizedBox(width: 8),
+        SizedBox(width: 60, child: ClipRRect(borderRadius: BorderRadius.circular(3),
+          child: LinearProgressIndicator(value: p.power/5, minHeight: 4,
+              backgroundColor: Colors.white12,
+              color: active ? _typeColor() : Colors.white24))),
+      ],
+    ]));
+}
+
+class _RobotPainter extends CustomPainter {
+  const _RobotPainter({required this.assembled});
+  final bool assembled;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width/2, cy = size.height/2;
+    final col = assembled ? _accent : Colors.white24;
+    final p = Paint()..color = col;
+    canvas.drawRRect(RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(cx, cy-60), width: 44, height: 40),
+        const Radius.circular(8)), p);
+    canvas.drawCircle(Offset(cx-10, cy-62), 5,
+        Paint()..color = assembled ? _accent2 : Colors.white24);
+    canvas.drawCircle(Offset(cx+10, cy-62), 5,
+        Paint()..color = assembled ? _accent2 : Colors.white24);
+    canvas.drawRRect(RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(cx, cy), width: 60, height: 70),
+        const Radius.circular(10)), p);
+    canvas.drawRRect(RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(cx-48, cy-10), width: 20, height: 56),
+        const Radius.circular(8)), Paint()..color = assembled ? _accent2 : Colors.white24);
+    canvas.drawRRect(RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(cx+48, cy-10), width: 20, height: 56),
+        const Radius.circular(8)), Paint()..color = assembled ? _accent2 : Colors.white24);
+    canvas.drawRRect(RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(cx-18, cy+54), width: 20, height: 44),
+        const Radius.circular(8)), p);
+    canvas.drawRRect(RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(cx+18, cy+54), width: 20, height: 44),
+        const Radius.circular(8)), p);
+    if (assembled) {
+      canvas.drawCircle(Offset(cx, cy), 12,
+          Paint()..color = _accent.withValues(alpha: 0.3));
+      canvas.drawCircle(Offset(cx, cy), 6, Paint()..color = _accent);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_RobotPainter o) => o.assembled != assembled;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 6. 3-D STUDIO
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _StudioScreen extends StatelessWidget {
+  const _StudioScreen({
+    required this.pulse, required this.tool, required this.material,
+    required this.brushSize, required this.physicsRunning, required this.logs,
+    required this.tools, required this.materials,
+    required this.onTool, required this.onMaterial,
+    required this.onBrush, required this.onPhysics,
+  });
+  final AnimationController pulse;
+  final String tool, material;
+  final double brushSize;
+  final bool physicsRunning;
+  final List<LogEntry> logs;
+  final List<String> tools, materials;
+  final ValueChanged<String> onTool, onMaterial;
+  final ValueChanged<double> onBrush;
+  final VoidCallback onPhysics;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomScrollView(slivers: [
+      SliverAppBar(pinned: true, backgroundColor: _bg,
+        title: const Text('3D Voxel Studio'),
+        actions: [Padding(padding: const EdgeInsets.only(right: 12),
+          child: FilledButton.icon(
+            onPressed: onPhysics,
+            icon: Icon(physicsRunning ? Icons.pause : Icons.science, size: 18),
+            label: Text(physicsRunning ? 'Pause' : 'Run Sim'),
+            style: FilledButton.styleFrom(
+                backgroundColor: physicsRunning ? _orange : _accent)))]),
+      SliverPadding(padding: const EdgeInsets.all(16), sliver: SliverToBoxAdapter(
+        child: Column(children: [
+          Card(child: SizedBox(height: 220,
+            child: AnimatedBuilder(animation: pulse, builder: (_, __) =>
+              CustomPaint(painter: _IsoPainter(pulse.value, physicsRunning))))),
+          const SizedBox(height: 16),
+          Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Tools', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
+              const SizedBox(height: 10),
+              Wrap(spacing: 8, runSpacing: 8, children: tools.map((t) => ChoiceChip(
+                label: Text(t, style: const TextStyle(fontSize: 12)),
+                selected: tool == t,
+                onSelected: (_) => onTool(t),
+                selectedColor: _accent.withValues(alpha: 0.3),
+                checkmarkColor: _accent,
+              )).toList()),
+            ],
+          ))),
+          const SizedBox(height: 12),
+          Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Materials', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
+              const SizedBox(height: 10),
+              Wrap(spacing: 8, runSpacing: 8, children: materials.map((m) => ChoiceChip(
+                label: Text(m, style: const TextStyle(fontSize: 12)),
+                selected: material == m,
+                onSelected: (_) => onMaterial(m),
+                selectedColor: _accent2.withValues(alpha: 0.25),
+                checkmarkColor: _accent2,
+              )).toList()),
+            ],
+          ))),
+          const SizedBox(height: 12),
+          Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                const Text('Brush Size',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
+                const Spacer(),
+                Text(brushSize.toStringAsFixed(1),
+                    style: const TextStyle(color: _accent2, fontWeight: FontWeight.bold)),
+              ]),
+              Slider(value: brushSize, min: 0.5, max: 8, divisions: 15,
+                  activeColor: _accent2, onChanged: onBrush),
+            ],
+          ))),
+        ]),
+      )),
+    ]);
+  }
+}
+
+class _IsoPainter extends CustomPainter {
+  const _IsoPainter(this.pulse, this.physics);
+  final double pulse;
+  final bool physics;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(Offset.zero & size, Paint()..color = const Color(0xFF0D1117));
+    final cx = size.width/2, cy = size.height*0.6;
+    const rows = 5, cols = 7, tw = 36.0, th = 20.0;
+    final rng = math.Random(99);
+    for (int r = rows-1; r >= 0; r--) {
+      for (int c = 0; c < cols; c++) {
+        final px = cx + (c-r)*(tw/2);
+        final py = cy + (c+r)*(th/2);
+        final h  = (rng.nextDouble()*3).ceil()*18.0;
+        _drawVoxel(canvas, px, py-h, tw, th, h, physics && rng.nextDouble()>0.7);
       }
     }
+  }
 
-    final int count = 26;
-    for (int i = 0; i < count; i++) {
-      final int x = (i % 7) - 3;
-      final int y = ((i * 3) % 7) - 3;
-      final int z = 1 + ((i + tick ~/ 10) % 4);
-      final double hot = (math.sin(i + tick / 12) + 1) * 0.5 * heat;
-      final Color color = Color.lerp(const Color(0xFF4B6BFF), const Color(0xFFFF7A3D), hot)!.withOpacity(0.84);
-      drawCube(canvas, iso(origin, x.toDouble(), y.toDouble(), z.toDouble(), block), block * 0.72, color);
+  void _drawVoxel(Canvas c, double x, double y, double tw, double th, double h, bool glow) {
+    final rng = math.Random(x.toInt()^y.toInt());
+    final hue = rng.nextDouble();
+    final top  = HSVColor.fromAHSV(1, hue*360, 0.4, 0.75).toColor();
+    final side = HSVColor.fromAHSV(1, hue*360, 0.7, 0.35).toColor();
+    final base = HSVColor.fromAHSV(1, hue*360, 0.6, 0.50).toColor();
+
+    final topPath = Path()
+      ..moveTo(x,       y)
+      ..lineTo(x+tw/2,  y-th/2)
+      ..lineTo(x+tw,    y)
+      ..lineTo(x+tw/2,  y+th/2)
+      ..close();
+    c.drawPath(topPath, Paint()..color = glow ? top.withValues(alpha: 0.6+pulse*0.4) : top);
+
+    final leftPath = Path()
+      ..moveTo(x,      y)
+      ..lineTo(x,      y+h)
+      ..lineTo(x+tw/2, y+h+th/2)
+      ..lineTo(x+tw/2, y+th/2)
+      ..close();
+    c.drawPath(leftPath, Paint()..color = side);
+
+    final rightPath = Path()
+      ..moveTo(x+tw/2, y+th/2)
+      ..lineTo(x+tw/2, y+h+th/2)
+      ..lineTo(x+tw,   y+h)
+      ..lineTo(x+tw,   y)
+      ..close();
+    c.drawPath(rightPath, Paint()..color = base);
+
+    if (glow) {
+      c.drawPath(topPath, Paint()
+        ..color = _accent.withValues(alpha: pulse*0.5)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6));
     }
-
-    final Paint water = Paint()..color = const Color(0xFF42C7FF).withOpacity((waterVolume / 60).clamp(0.20, 0.72));
-    final double wave = math.sin(tick / 10) * 8;
-    canvas.drawOval(Rect.fromCenter(center: Offset(size.width * 0.70, size.height * 0.72 + wave), width: 120, height: 34), water);
-
-    final Paint risk = Paint()
-      ..color = Colors.redAccent.withOpacity(fractureRisk.clamp(0.0, 0.7))
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    canvas.drawCircle(Offset(size.width * 0.28, size.height * 0.62), 32 + fractureRisk * 40, risk);
   }
 
   @override
-  bool shouldRepaint(covariant MiniWorldPainter oldDelegate) {
-    return oldDelegate.tick != tick || oldDelegate.heat != heat || oldDelegate.waterVolume != waterVolume || oldDelegate.fractureRisk != fractureRisk;
+  bool shouldRepaint(_IsoPainter o) => o.pulse != pulse || o.physics != physics;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 7. GAMES
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _GamesScreen extends StatefulWidget {
+  const _GamesScreen({required this.race, required this.onStartRace,
+    required this.onBoost, required this.onResetRace});
+  final RaceState race;
+  final VoidCallback onStartRace, onResetRace;
+  final ValueChanged<bool> onBoost;
+
+  @override
+  State<_GamesScreen> createState() => _GamesScreenState();
+}
+
+class _GamesScreenState extends State<_GamesScreen> {
+  int _gameTab = 0;
+  static const _tabs = ['Racing','Sandbox','Fluid','Arena','Colony'];
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomScrollView(slivers: [
+      SliverAppBar(pinned: true, backgroundColor: _bg,
+        title: const Text('Game Studio'),
+        bottom: PreferredSize(preferredSize: const Size.fromHeight(50),
+          child: SizedBox(height: 42, child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            itemCount: _tabs.length,
+            itemBuilder: (_, i) => Padding(padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(_tabs[i]), selected: _gameTab == i,
+                onSelected: (_) => setState(() => _gameTab = i),
+                selectedColor: _accent.withValues(alpha: 0.3))))))),
+      SliverPadding(padding: const EdgeInsets.all(16), sliver: SliverToBoxAdapter(
+        child: _gameTab == 0
+          ? _RaceGame(race: widget.race, onStart: widget.onStartRace,
+              onBoost: widget.onBoost, onReset: widget.onResetRace)
+          : _StaticGameCard(_tabs[_gameTab]),
+      )),
+    ]);
   }
 }
 
-class StudioViewportPainter extends CustomPainter {
-  StudioViewportPainter({
-    required this.tick,
-    required this.pulse,
-    required this.materialName,
-    required this.toolName,
-    required this.heat,
-    required this.waterVolume,
-    required this.fractureRisk,
-  });
+class _RaceGame extends StatelessWidget {
+  const _RaceGame({required this.race, required this.onStart,
+    required this.onBoost, required this.onReset});
+  final RaceState race;
+  final VoidCallback onStart, onReset;
+  final ValueChanged<bool> onBoost;
 
-  final int tick;
-  final double pulse;
-  final String materialName;
-  final String toolName;
-  final double heat;
-  final double waterVolume;
-  final double fractureRisk;
+  @override
+  Widget build(BuildContext context) {
+    return Column(children: [
+      Card(child: SizedBox(height: 200, child: CustomPaint(painter: _TrackPainter(race)))),
+      const SizedBox(height: 16),
+      Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
+        Row(children: [
+          Expanded(child: _TelRow('Speed',  '${race.speed.toStringAsFixed(0)} km/h', Icons.speed, _accent2)),
+          Expanded(child: _TelRow('Lap',    '${race.lap}/3',                         Icons.loop,  _accent)),
+        ]),
+        const SizedBox(height: 8),
+        Row(children: [
+          Expanded(child: _TelRow('Fuel',  '${race.fuel.toStringAsFixed(0)}%',        Icons.local_gas_station, _yellow)),
+          Expanded(child: _TelRow('Tires', '${(race.tire*100).toStringAsFixed(0)}%',  Icons.circle,            _orange)),
+        ]),
+        const SizedBox(height: 8),
+        Row(children: [
+          Expanded(child: _TelRow('Grip',  '${(race.grip*100).toStringAsFixed(0)}%',  Icons.settings_input_component, _green)),
+          Expanded(child: _TelRow('Dist',  race.position.toStringAsFixed(2),          Icons.place,             Colors.white54)),
+        ]),
+      ]))),
+      const SizedBox(height: 16),
+      Row(children: [
+        Expanded(child: race.finished
+          ? FilledButton.icon(onPressed: onReset, icon: const Icon(Icons.refresh),
+              label: const Text('Restart'),
+              style: FilledButton.styleFrom(backgroundColor: _accent))
+          : FilledButton.icon(onPressed: onStart, icon: const Icon(Icons.play_arrow),
+              label: const Text('Race!'),
+              style: FilledButton.styleFrom(backgroundColor: _green))),
+        if (!race.finished) ...[
+          const SizedBox(width: 12),
+          GestureDetector(
+            onTapDown:   (_) => onBoost(true),
+            onTapUp:     (_) => onBoost(false),
+            onTapCancel: ()  => onBoost(false),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              decoration: BoxDecoration(
+                color: race.boost ? _red : _card,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: _red.withValues(alpha: 0.5)),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.bolt, color: race.boost ? Colors.white : _red),
+                const SizedBox(width: 6),
+                Text('BOOST',
+                    style: TextStyle(fontWeight: FontWeight.bold,
+                        color: race.boost ? Colors.white : _red)),
+              ]),
+            ),
+          ),
+        ],
+      ]),
+      if (race.finished) ...[
+        const SizedBox(height: 16),
+        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(race.lap >= 3 ? '🏆 Race Complete!' : '💥 Out of Fuel!',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('Laps: ${race.lap}/3  |  Ticks: ${race.tick}',
+                style: const TextStyle(color: Colors.white54)),
+          ],
+        ))),
+      ],
+      if (race.events.isNotEmpty) ...[
+        const SizedBox(height: 12),
+        Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Race Log',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
+            const SizedBox(height: 8),
+            ...race.events.take(5).map((e) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text('• $e', style: const TextStyle(fontSize: 12, color: Colors.white70)))),
+          ],
+        ))),
+      ],
+    ]);
+  }
+}
+
+class _TelRow extends StatelessWidget {
+  const _TelRow(this.label, this.value, this.icon, this.color);
+  final String label, value;
+  final IconData icon;
+  final Color color;
+  @override
+  Widget build(BuildContext context) => Row(children: [
+    Icon(icon, size: 14, color: color), const SizedBox(width: 6),
+    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label, style: const TextStyle(fontSize: 10, color: Colors.white38)),
+      Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
+    ]),
+  ]);
+}
+
+class _TrackPainter extends CustomPainter {
+  const _TrackPainter(this.race);
+  final RaceState race;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint bg = Paint()
-      ..shader = RadialGradient(
-        colors: <Color>[const Color(0xFF241B4D).withOpacity(0.55 + pulse * 0.12), const Color(0xFF090B13)],
-      ).createShader(Offset.zero & size);
-    canvas.drawRect(Offset.zero & size, bg);
-
-    final double block = math.min(size.width, size.height) / 13;
-    final Offset origin = Offset(size.width * 0.52, size.height * 0.42);
-    final Paint grid = Paint()
-      ..color = Colors.white.withOpacity(0.08)
-      ..style = PaintingStyle.stroke;
-
-    for (int x = -6; x <= 6; x++) {
-      final Offset a = iso(origin, x.toDouble(), -5, 0, block);
-      final Offset b = iso(origin, x.toDouble(), 5, 0, block);
-      canvas.drawLine(a, b, grid);
-    }
-    for (int y = -5; y <= 5; y++) {
-      final Offset a = iso(origin, -6, y.toDouble(), 0, block);
-      final Offset b = iso(origin, 6, y.toDouble(), 0, block);
-      canvas.drawLine(a, b, grid);
-    }
-
-    for (int i = 0; i < 34; i++) {
-      final int x = (i % 8) - 4;
-      final int y = ((i * 5) % 9) - 4;
-      final int z = 1 + ((i * 7 + tick ~/ 10) % 5);
-      final double blend = ((math.sin(i * 0.7 + pulse * math.pi) + 1) * 0.5).clamp(0.0, 1.0);
-      final Color base = materialColor(materialName, blend);
-      drawCube(canvas, iso(origin, x.toDouble(), y.toDouble(), z.toDouble(), block), block * 0.76, base.withOpacity(0.88));
-    }
-
-    final Paint cursor = Paint()
-      ..color = Colors.white.withOpacity(0.80)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    final Offset c = Offset(size.width * (0.52 + math.sin(pulse * math.pi * 2) * 0.08), size.height * 0.42);
-    canvas.drawCircle(c, 22 + pulse * 12, cursor);
-
-    final Paint heatPaint = Paint()..color = Colors.deepOrangeAccent.withOpacity((heat * 0.28).clamp(0.0, 0.36));
-    canvas.drawCircle(Offset(size.width * 0.80, size.height * 0.32), 70 + pulse * 20, heatPaint);
-
-    final Paint fluid = Paint()..color = Colors.cyanAccent.withOpacity((waterVolume / 90).clamp(0.1, 0.46));
-    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(size.width * 0.08, size.height * 0.70, size.width * 0.38, 44), const Radius.circular(24)), fluid);
-
-    final Paint risk = Paint()
-      ..color = Colors.redAccent.withOpacity(fractureRisk.clamp(0.0, 0.70))
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.4;
-    canvas.drawCircle(Offset(size.width * 0.34, size.height * 0.40), 36 + fractureRisk * 80, risk);
+    canvas.drawRect(Offset.zero & size, Paint()..color = const Color(0xFF0A0E1A));
+    canvas.drawPath(
+      Path()
+        ..moveTo(size.width*0.15, size.height*0.5)
+        ..cubicTo(size.width*0.15, size.height*0.1, size.width*0.5, size.height*0.1, size.width*0.85, size.height*0.5)
+        ..cubicTo(size.width*0.85, size.height*0.9, size.width*0.5, size.height*0.9, size.width*0.15, size.height*0.5),
+      Paint()..color = const Color(0xFF1E2533)..style = PaintingStyle.stroke..strokeWidth = 28,
+    );
+    final t  = race.position % 1.0;
+    final a  = t * 2 * math.pi;
+    final carX = size.width*0.5  + math.cos(a)*size.width*0.35;
+    final carY = size.height*0.5 + math.sin(a)*size.height*0.38;
+    canvas.drawCircle(Offset(carX, carY), 8,  Paint()..color = race.boost ? _red : _accent);
+    canvas.drawCircle(Offset(carX, carY), 5,  Paint()..color = Colors.white);
+    final barW = (race.speed/260).clamp(0.0,1.0)*size.width*0.8;
+    canvas.drawRRect(RRect.fromRectAndRadius(
+        Rect.fromLTWH(size.width*0.1, size.height-16, size.width*0.8, 8),
+        const Radius.circular(4)), Paint()..color = Colors.white12);
+    canvas.drawRRect(RRect.fromRectAndRadius(
+        Rect.fromLTWH(size.width*0.1, size.height-16, barW, 8),
+        const Radius.circular(4)), Paint()..color = race.boost ? _red : _accent2);
   }
 
   @override
-  bool shouldRepaint(covariant StudioViewportPainter oldDelegate) {
-    return oldDelegate.tick != tick || oldDelegate.pulse != pulse || oldDelegate.materialName != materialName || oldDelegate.toolName != toolName || oldDelegate.heat != heat || oldDelegate.waterVolume != waterVolume || oldDelegate.fractureRisk != fractureRisk;
-  }
+  bool shouldRepaint(_TrackPainter _) => true;
 }
 
-class AssetShowcasePainter extends CustomPainter {
-  AssetShowcasePainter(this.pulse);
-
-  final double pulse;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint bg = Paint()
-      ..shader = const LinearGradient(
-        colors: <Color>[Color(0xFF101426), Color(0xFF25183D)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ).createShader(Offset.zero & size);
-    canvas.drawRect(Offset.zero & size, bg);
-
-    final Paint grid = Paint()
-      ..color = Colors.white.withOpacity(0.06)
-      ..strokeWidth = 1;
-    for (double x = 0; x < size.width; x += 28) {
-      canvas.drawLine(Offset(x, 0), Offset(x + 80, size.height), grid);
-    }
-
-    final Paint glow = Paint()..color = Colors.purpleAccent.withOpacity(0.24 + pulse * 0.16);
-    canvas.drawCircle(Offset(size.width * 0.78, size.height * 0.40), 80 + pulse * 34, glow);
-    final Paint water = Paint()..color = Colors.cyanAccent.withOpacity(0.18 + pulse * 0.12);
-    canvas.drawOval(Rect.fromCenter(center: Offset(size.width * 0.68, size.height * 0.72), width: 180, height: 42), water);
-  }
-
-  @override
-  bool shouldRepaint(covariant AssetShowcasePainter oldDelegate) => oldDelegate.pulse != pulse;
-}
-
-Offset iso(Offset origin, double x, double y, double z, double block) {
-  return Offset(
-    origin.dx + (x - y) * block * 0.72,
-    origin.dy + (x + y) * block * 0.36 - z * block * 0.62,
-  );
-}
-
-void drawCube(Canvas canvas, Offset top, double size, Color color) {
-  final Paint topPaint = Paint()..color = Color.lerp(color, Colors.white, 0.18)!;
-  final Paint leftPaint = Paint()..color = Color.lerp(color, Colors.black, 0.18)!;
-  final Paint rightPaint = Paint()..color = Color.lerp(color, Colors.black, 0.34)!;
-  final double h = size * 0.52;
-
-  final Path topFace = Path()
-    ..moveTo(top.dx, top.dy - h)
-    ..lineTo(top.dx + size, top.dy)
-    ..lineTo(top.dx, top.dy + h)
-    ..lineTo(top.dx - size, top.dy)
-    ..close();
-  final Path leftFace = Path()
-    ..moveTo(top.dx - size, top.dy)
-    ..lineTo(top.dx, top.dy + h)
-    ..lineTo(top.dx, top.dy + h + size)
-    ..lineTo(top.dx - size, top.dy + size)
-    ..close();
-  final Path rightFace = Path()
-    ..moveTo(top.dx + size, top.dy)
-    ..lineTo(top.dx, top.dy + h)
-    ..lineTo(top.dx, top.dy + h + size)
-    ..lineTo(top.dx + size, top.dy + size)
-    ..close();
-
-  canvas.drawPath(leftFace, leftPaint);
-  canvas.drawPath(rightFace, rightPaint);
-  canvas.drawPath(topFace, topPaint);
-
-  final Paint outline = Paint()
-    ..color = Colors.white.withOpacity(0.10)
-    ..style = PaintingStyle.stroke;
-  canvas.drawPath(topFace, outline);
-  canvas.drawPath(leftFace, outline);
-  canvas.drawPath(rightFace, outline);
-}
-
-Color materialColor(String materialName, double blend) {
-  switch (materialName) {
-    case 'Stone':
-      return Color.lerp(const Color(0xFF6C7080), const Color(0xFFB8BBC8), blend)!;
-    case 'Glass':
-      return Color.lerp(const Color(0xFF9EE7FF), const Color(0xFFE8FBFF), blend)!;
-    case 'Water':
-      return Color.lerp(const Color(0xFF176CFF), const Color(0xFF4EE4FF), blend)!;
-    case 'Lava':
-      return Color.lerp(const Color(0xFFFF3D2E), const Color(0xFFFFC14A), blend)!;
-    case 'Carbon Fiber':
-      return Color.lerp(const Color(0xFF16191F), const Color(0xFF596070), blend)!;
-    case 'Neon Circuit':
-      return Color.lerp(const Color(0xFF00FFC2), const Color(0xFFAE5CFF), blend)!;
-    case 'Reactive Foam':
-      return Color.lerp(const Color(0xFFECE0C9), const Color(0xFF8CFFE5), blend)!;
-    case 'Photonic Alloy':
-    default:
-      return Color.lerp(const Color(0xFF7864FF), const Color(0xFF38D8FF), blend)!;
-  }
-}
-
-class LogEntry {
-  const LogEntry(this.title, this.message);
-  final String title;
-  final String message;
-}
-
-class ModuleInfo {
-  const ModuleInfo(this.name, this.description, this.icon, this.readiness);
+class _StaticGameCard extends StatelessWidget {
+  const _StaticGameCard(this.name);
   final String name;
-  final String description;
-  final IconData icon;
-  final double readiness;
-}
 
-class GameTemplate {
-  const GameTemplate(this.name, this.description, this.icon, this.objective);
-  final String name;
-  final String description;
-  final IconData icon;
-  final String objective;
-}
+  static const _info = {
+    'Sandbox': ('Creative mode with snap-grid construction and simulation toggles.',
+                'Build a structure, inject heat, then watch fracture risk climb.',
+                Icons.foundation),
+    'Fluid':   ('Route water through destructible voxel channels.',
+                'Goal: move 40 units of water to the blue target zone.',
+                Icons.water_drop),
+    'Arena':   ('Small action mode with moving hazards and pickups.',
+                'Goal: survive waves while the world changes around you.',
+                Icons.directions_run),
+    'Colony':  ('Spawn AI agents and give them resource tasks.',
+                'Goal: keep energy, heat and structure stability balanced.',
+                Icons.groups_3),
+  };
 
-class AssetItem {
-  const AssetItem(this.title, this.description, this.icon);
-  final String title;
-  final String description;
-  final IconData icon;
+  @override
+  Widget build(BuildContext context) {
+    final info = _info[name]!;
+    return Card(child: Padding(padding: const EdgeInsets.all(24), child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(info.$3, size: 32, color: _accent),
+          const SizedBox(width: 12),
+          Text(name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        ]),
+        const SizedBox(height: 16),
+        Text(info.$1, style: const TextStyle(color: Colors.white70, height: 1.5)),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+              color: _accent.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
+          child: Row(children: [
+            const Icon(Icons.flag, size: 16, color: _accent),
+            const SizedBox(width: 8),
+            Expanded(child: Text(info.$2,
+                style: const TextStyle(fontSize: 13, color: _accent2))),
+          ]),
+        ),
+        const SizedBox(height: 20),
+        FilledButton.icon(
+          onPressed: () {},
+          icon: const Icon(Icons.play_arrow),
+          label: const Text('Launch (coming soon)'),
+          style: FilledButton.styleFrom(
+              backgroundColor: _accent, minimumSize: const Size(double.infinity, 48)),
+        ),
+      ],
+    )));
+  }
 }
