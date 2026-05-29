@@ -31,7 +31,7 @@ class VoxForgeApp extends StatelessWidget {
         colorSchemeSeed: _accent,
         brightness: Brightness.dark,
         scaffoldBackgroundColor: _bg,
-        cardTheme: CardThemeData(
+        cardTheme: CardTheme(
           color: _card,
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -337,7 +337,7 @@ class _VoxForgeShellState extends State<VoxForgeShell>
       bottomNavigationBar: NavigationBar(
         backgroundColor: _card,
         selectedIndex: _idx,
-        indicatorColor: _accent.withValues(alpha: 0.3),
+        indicatorColor: _accent.withOpacity(0.3),
         onDestinationSelected: (i) => setState(() => _idx = i),
         destinations: _navItems,
         labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
@@ -601,7 +601,7 @@ class _TrafficLight extends StatelessWidget {
       color: state == 'green' ? _green : state == 'yellow' ? _yellow : _red,
       boxShadow: [BoxShadow(
         color: (state == 'green' ? _green : state == 'yellow' ? _yellow : _red)
-            .withValues(alpha: 0.6),
+            .withOpacity(0.6),
         blurRadius: 8)],
     )),
   ]);
@@ -634,7 +634,7 @@ class _CityPainter extends CustomPainter {
     }
     if (congestion > 0.5) {
       canvas.drawRect(Offset.zero & size,
-          Paint()..color = _red.withValues(alpha: (congestion-0.5)*0.3));
+          Paint()..color = _red.withOpacity((congestion-0.5)*0.3));
     }
   }
 
@@ -746,7 +746,7 @@ class _CarPainter extends CustomPainter {
       canvas.drawCircle(pos, 12, rim);
     }
     canvas.drawCircle(Offset(cx+72, cy-8), 6, Paint()..color = _yellow);
-    canvas.drawCircle(Offset(cx-72, cy-8), 6, Paint()..color = _yellow.withValues(alpha: 0.4));
+    canvas.drawCircle(Offset(cx-72, cy-8), 6, Paint()..color = _yellow.withOpacity(0.4));
     canvas.drawLine(Offset(cx-80, cy-30), Offset(cx+80, cy-30),
         Paint()..color = _accent2..strokeWidth = 2..strokeCap = StrokeCap.round);
   }
@@ -786,7 +786,7 @@ class _CharacterScreen extends StatelessWidget {
                 label: Text(_categories[i], style: const TextStyle(fontSize: 12)),
                 selected: filter == _categories[i],
                 onSelected: (_) => onFilter(_categories[i]),
-                selectedColor: _accent.withValues(alpha: 0.3),
+                selectedColor: _accent.withOpacity(0.3),
                 checkmarkColor: _accent))))),
       ),
       SliverPadding(
@@ -820,13 +820,13 @@ class _CharCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           CircleAvatar(radius: 18,
-            backgroundColor: col.withValues(alpha: 0.15),
+            backgroundColor: col.withOpacity(0.15),
             child: Text(char.name[0], style: TextStyle(color: col, fontWeight: FontWeight.bold))),
           const Spacer(),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-                color: col.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
+                color: col.withOpacity(0.15), borderRadius: BorderRadius.circular(20)),
             child: Text(char.role, style: TextStyle(fontSize: 10, color: col))),
         ]),
         const SizedBox(height: 10),
@@ -978,7 +978,7 @@ class _RobotPainter extends CustomPainter {
         const Radius.circular(8)), p);
     if (assembled) {
       canvas.drawCircle(Offset(cx, cy), 12,
-          Paint()..color = _accent.withValues(alpha: 0.3));
+          Paint()..color = _accent.withOpacity(0.3));
       canvas.drawCircle(Offset(cx, cy), 6, Paint()..color = _accent);
     }
   }
@@ -1035,7 +1035,7 @@ class _StudioScreen extends StatelessWidget {
                 label: Text(t, style: const TextStyle(fontSize: 12)),
                 selected: tool == t,
                 onSelected: (_) => onTool(t),
-                selectedColor: _accent.withValues(alpha: 0.3),
+                selectedColor: _accent.withOpacity(0.3),
                 checkmarkColor: _accent,
               )).toList()),
             ],
@@ -1049,7 +1049,7 @@ class _StudioScreen extends StatelessWidget {
                 label: Text(m, style: const TextStyle(fontSize: 12)),
                 selected: material == m,
                 onSelected: (_) => onMaterial(m),
-                selectedColor: _accent2.withValues(alpha: 0.25),
+                selectedColor: _accent2.withOpacity(0.25),
                 checkmarkColor: _accent2,
               )).toList()),
             ],
@@ -1108,7 +1108,7 @@ class _IsoPainter extends CustomPainter {
       ..lineTo(x+tw,    y)
       ..lineTo(x+tw/2,  y+th/2)
       ..close();
-    c.drawPath(topPath, Paint()..color = glow ? top.withValues(alpha: 0.6+pulse*0.4) : top);
+    c.drawPath(topPath, Paint()..color = glow ? top.withOpacity(0.6+pulse*0.4) : top);
 
     final leftPath = Path()
       ..moveTo(x,      y)
@@ -1128,7 +1128,7 @@ class _IsoPainter extends CustomPainter {
 
     if (glow) {
       c.drawPath(topPath, Paint()
-        ..color = _accent.withValues(alpha: pulse*0.5)
+        ..color = _accent.withOpacity(pulse*0.5)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6));
     }
   }
@@ -1170,7 +1170,7 @@ class _GamesScreenState extends State<_GamesScreen> {
               child: ChoiceChip(
                 label: Text(_tabs[i]), selected: _gameTab == i,
                 onSelected: (_) => setState(() => _gameTab = i),
-                selectedColor: _accent.withValues(alpha: 0.3))))))),
+                selectedColor: _accent.withOpacity(0.3))))))),
       SliverPadding(padding: const EdgeInsets.all(16), sliver: SliverToBoxAdapter(
         child: _gameTab == 0
           ? _RaceGame(race: widget.race, onStart: widget.onStartRace,
@@ -1229,7 +1229,7 @@ class _RaceGame extends StatelessWidget {
               decoration: BoxDecoration(
                 color: race.boost ? _red : _card,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: _red.withValues(alpha: 0.5)),
+                border: Border.all(color: _red.withOpacity(0.5)),
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Icon(Icons.bolt, color: race.boost ? Colors.white : _red),
@@ -1353,7 +1353,7 @@ class _StaticGameCard extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-              color: _accent.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
+              color: _accent.withOpacity(0.08), borderRadius: BorderRadius.circular(12)),
           child: Row(children: [
             const Icon(Icons.flag, size: 16, color: _accent),
             const SizedBox(width: 8),
