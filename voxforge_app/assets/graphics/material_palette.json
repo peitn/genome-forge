@@ -1,0 +1,10 @@
+{
+  "materials": [
+    {"name": "Photonic Alloy", "hex_a": "#7864FF", "hex_b": "#38D8FF", "role": "hero material"},
+    {"name": "Carbon Fiber", "hex_a": "#16191F", "hex_b": "#596070", "role": "vehicle / structure"},
+    {"name": "Reactive Foam", "hex_a": "#ECE0C9", "hex_b": "#8CFFE5", "role": "impact absorption"},
+    {"name": "Lava", "hex_a": "#FF3D2E", "hex_b": "#FFC14A", "role": "thermal hazard"},
+    {"name": "Water", "hex_a": "#176CFF", "hex_b": "#4EE4FF", "role": "fluid simulation"}
+  ],
+  "animation_notes": "The current app renders procedural graphics through Flutter CustomPainter. Replace or extend this palette with image, shader, or mesh assets later."
+}

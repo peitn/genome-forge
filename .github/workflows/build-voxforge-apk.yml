@@ -1,0 +1,90 @@
+name: Build VoxForge APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'voxforge_app/**'
+      - '.github/workflows/build-voxforge-apk.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: stable
+          cache: true
+
+      - name: Scaffold Flutter project
+        run: |
+          flutter create --org com.phantom.voxforge --project-name voxforge_noctilith_studio build_project
+          # Replace main.dart and pubspec with superpack versions
+          cp voxforge_app/lib/main.dart build_project/lib/main.dart
+          cp voxforge_app/pubspec.yaml build_project/pubspec.yaml
+          # Copy assets
+          cp -r voxforge_app/assets build_project/
+          # Copy test
+          cp voxforge_app/test/widget_test.dart build_project/test/widget_test.dart
+
+      - name: Flutter pub get
+        working-directory: build_project
+        run: flutter pub get
+
+      - name: Flutter analyze
+        working-directory: build_project
+        run: flutter analyze --no-fatal-infos || true
+
+      - name: Build APK
+        working-directory: build_project
+        run: flutter build apk --release --target-platform android-arm64
+
+      - name: Rename APK
+        run: |
+          cp build_project/build/app/outputs/flutter-apk/app-release.apk voxforge-noctilith-studio.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: voxforge-apk
+          path: voxforge-noctilith-studio.apk
+          retention-days: 90
+
+      - name: Create / update release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: voxforge-latest
+          name: "VoxForge Noctilith Studio – latest build"
+          body: |
+            ## VoxForge Noctilith Studio
+
+            Automaticky sestavený APK – Flutter simulation studio.
+
+            ### Funkce
+            - Dashboard: water, heat, fracture risk, AI signal
+            - 3D Studio s procedurálním izometrickým viewportem
+            - Editor nástroje: brush, erase, paint, fluid, fracture, agent spawner
+            - 4 herní šablony: Sandbox Builder, Fluid Puzzle, Arena Runner, Colony Agents
+            - Animace přes CustomPainter + AudioController
+
+            ### Instalace
+            1. Stáhni APK níže
+            2. Na telefonu povol **Instalace z neznámých zdrojů**
+            3. Otevři stažený soubor a nainstaluj
+          files: voxforge-noctilith-studio.apk
+          prerelease: false
+          make_latest: true

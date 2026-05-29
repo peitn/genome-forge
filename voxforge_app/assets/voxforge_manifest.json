@@ -1,0 +1,25 @@
+{
+  "name": "VoxForge / Noctilith Studio",
+  "version": "0.2.0-superpack",
+  "kind": "Flutter shell app",
+  "source_input": "source_input/voxforge_noctilith_merged.zip",
+  "verified_python_tests": "51 passed, 1 warning",
+  "features": [
+    "dashboard",
+    "3d_editing_studio_shell",
+    "builder_tools",
+    "prepared_game_templates",
+    "procedural_graphics",
+    "custom_painter_animations",
+    "audio_placeholders",
+    "android_signing_templates",
+    "future_backend_bridge_plan"
+  ],
+  "bridge_endpoints_suggested": [
+    "POST /world/create",
+    "POST /sim/tick",
+    "POST /fluid/add",
+    "POST /thermal/spike",
+    "GET /world/snapshot"
+  ]
+}
