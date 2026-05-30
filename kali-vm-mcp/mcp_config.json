@@ -1,9 +1,11 @@
 {
   "mcpServers": {
-    "kali-vm": {
+    "kali-vm-remote": {
+      "url": "https://kali-mcp-gateway.alena-rejdova.workers.dev/mcp"
+    },
+    "kali-vm-local": {
       "command": "python3",
-      "args": ["/path/to/kali-vm-mcp/server.py"],
-      "env": {}
+      "args": ["/path/to/kali-vm-mcp/server.py"]
     }
   }
 }
