@@ -1,0 +1,21 @@
+{
+  "format": "share-import-big-container.v1",
+  "original_name": "pyproject.toml",
+  "original_size_bytes": 957,
+  "original_sha256": "9392c561399072ca21a7dfe40f7c8c80daf8fd815a8b7cd029152a65ad96a478",
+  "encoding": "base64",
+  "chunk_size_chars": 24000,
+  "part_count": 1,
+  "parts": [
+    {
+      "index": 0,
+      "file": "part_0000.b64",
+      "chars": 1276,
+      "sha256": "984589d3b8cde2707a2b811c5e956c464185dc40467aa07c18bef7346dac59db"
+    }
+  ],
+  "commands": {
+    "pack": "python bigcontainer.py pack pyproject.toml",
+    "unpack": "python bigcontainer.py unpack --manifest manifest.json --out pyproject.toml"
+  }
+}

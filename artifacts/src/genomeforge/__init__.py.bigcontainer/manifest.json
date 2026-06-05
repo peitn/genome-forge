@@ -1,0 +1,21 @@
+{
+  "format": "share-import-big-container.v1",
+  "original_name": "__init__.py",
+  "original_size_bytes": 757,
+  "original_sha256": "c8174c74f375507e03712d3087831dadb37258865b76a205a0ccd58df9015cf8",
+  "encoding": "base64",
+  "chunk_size_chars": 24000,
+  "part_count": 1,
+  "parts": [
+    {
+      "index": 0,
+      "file": "part_0000.b64",
+      "chars": 1012,
+      "sha256": "ff78678fb818981dbe3a53a27c79c74541f48f615b4f41cf93daad290430a28f"
+    }
+  ],
+  "commands": {
+    "pack": "python bigcontainer.py pack __init__.py",
+    "unpack": "python bigcontainer.py unpack --manifest manifest.json --out __init__.py"
+  }
+}

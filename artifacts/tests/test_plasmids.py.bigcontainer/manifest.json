@@ -1,0 +1,21 @@
+{
+  "format": "share-import-big-container.v1",
+  "original_name": "test_plasmids.py",
+  "original_size_bytes": 1458,
+  "original_sha256": "1dbd7344ca2798436c289532c503cbd04ebb1bc109d071d2eab859fd885f248b",
+  "encoding": "base64",
+  "chunk_size_chars": 24000,
+  "part_count": 1,
+  "parts": [
+    {
+      "index": 0,
+      "file": "part_0000.b64",
+      "chars": 1944,
+      "sha256": "972e156dbe920fca2f8ec1665241b9736fe761b774503a7927d81e7cf4fdc8cd"
+    }
+  ],
+  "commands": {
+    "pack": "python bigcontainer.py pack test_plasmids.py",
+    "unpack": "python bigcontainer.py unpack --manifest manifest.json --out test_plasmids.py"
+  }
+}

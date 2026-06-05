@@ -1,0 +1,21 @@
+{
+  "format": "share-import-big-container.v1",
+  "original_name": "test_adapt.py",
+  "original_size_bytes": 595,
+  "original_sha256": "dc047b7d07095aee1df5e9decb40a923155bc7b218d3c707f4e77b3f0e81d078",
+  "encoding": "base64",
+  "chunk_size_chars": 24000,
+  "part_count": 1,
+  "parts": [
+    {
+      "index": 0,
+      "file": "part_0000.b64",
+      "chars": 796,
+      "sha256": "293fce2452b5182e39fc41ef0e2921760d0c844dc32800fdcae237290502bd36"
+    }
+  ],
+  "commands": {
+    "pack": "python bigcontainer.py pack test_adapt.py",
+    "unpack": "python bigcontainer.py unpack --manifest manifest.json --out test_adapt.py"
+  }
+}

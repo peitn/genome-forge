@@ -1,0 +1,21 @@
+{
+  "format": "share-import-big-container.v1",
+  "original_name": "lowering.py",
+  "original_size_bytes": 2828,
+  "original_sha256": "5d75c7f4e9ae8b11548f3fb99dd68b7aaf65c219c2964f892ccfe621b5a2e5f1",
+  "encoding": "base64",
+  "chunk_size_chars": 24000,
+  "part_count": 1,
+  "parts": [
+    {
+      "index": 0,
+      "file": "part_0000.b64",
+      "chars": 3772,
+      "sha256": "94926902eed6129f073cea73770bb7a083dff21441e4bfbaf0a3da58b94648c4"
+    }
+  ],
+  "commands": {
+    "pack": "python bigcontainer.py pack lowering.py",
+    "unpack": "python bigcontainer.py unpack --manifest manifest.json --out lowering.py"
+  }
+}

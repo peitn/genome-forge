@@ -1,0 +1,21 @@
+{
+  "format": "share-import-big-container.v1",
+  "original_name": "test_baseline_example.py",
+  "original_size_bytes": 642,
+  "original_sha256": "84dd28c6cced1d97399bebcdda28402b57341c101bbd7170a0276ae2c09491f8",
+  "encoding": "base64",
+  "chunk_size_chars": 24000,
+  "part_count": 1,
+  "parts": [
+    {
+      "index": 0,
+      "file": "part_0000.b64",
+      "chars": 856,
+      "sha256": "585a2b5ef0239932d1fe4414864cfa0810b1b2d72b5c0fcd680e0f72222f2c21"
+    }
+  ],
+  "commands": {
+    "pack": "python bigcontainer.py pack test_baseline_example.py",
+    "unpack": "python bigcontainer.py unpack --manifest manifest.json --out test_baseline_example.py"
+  }
+}

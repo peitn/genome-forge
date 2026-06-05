@@ -1,0 +1,21 @@
+{
+  "format": "share-import-big-container.v1",
+  "original_name": "evaluator.py",
+  "original_size_bytes": 3281,
+  "original_sha256": "af37e669c01227c8744e708e578c33a21733d1676f971d363a9ca478ddbc3f91",
+  "encoding": "base64",
+  "chunk_size_chars": 24000,
+  "part_count": 1,
+  "parts": [
+    {
+      "index": 0,
+      "file": "part_0000.b64",
+      "chars": 4376,
+      "sha256": "5573adb0c5f284560c6876e446a371827c33574bb3e88e4db9aa9a5d059f0012"
+    }
+  ],
+  "commands": {
+    "pack": "python bigcontainer.py pack evaluator.py",
+    "unpack": "python bigcontainer.py unpack --manifest manifest.json --out evaluator.py"
+  }
+}

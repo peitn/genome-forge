@@ -1,0 +1,21 @@
+{
+  "format": "share-import-big-container.v1",
+  "original_name": "compiler.py",
+  "original_size_bytes": 4975,
+  "original_sha256": "40b555b2da1ddc812fc3a368c968017e2b08e52b234ec362d23868a534ef39e1",
+  "encoding": "base64",
+  "chunk_size_chars": 24000,
+  "part_count": 1,
+  "parts": [
+    {
+      "index": 0,
+      "file": "part_0000.b64",
+      "chars": 6636,
+      "sha256": "29555025fba29db265b3f5382a58025995e4eada644612aba0e08e07ad5db870"
+    }
+  ],
+  "commands": {
+    "pack": "python bigcontainer.py pack compiler.py",
+    "unpack": "python bigcontainer.py unpack --manifest manifest.json --out compiler.py"
+  }
+}
